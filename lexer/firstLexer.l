@@ -97,6 +97,8 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 {W}+ {/*nothing*/}
 \n					{ linecount++; }
 
+<<EOF>> { return T_eof; }
+
 . { yyerror("no such token"); }
 
 %%
