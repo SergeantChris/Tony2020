@@ -164,6 +164,47 @@ expr_full:
 | /* nothing */
 ;
 
+atom:
+ T_id
+| T_string
+| call
+| atom '[' expr ']'
+;
+
+expr:
+ atom
+| rval
+;
+
+rval:
+	T_int_const
+| T_char_const
+| '(' expr ')'
+| '+' expr
+| '-' expr
+| expr '+' expr
+| expr '-' expr
+| expr '*' expr
+| expr '/' expr
+| expr "mod" expr
+| expr '=' expr
+| expr "<>" expr
+| expr '<' expr
+| expr '>' expr
+| expr "<=" expr
+| expr ">=" expr
+| "not" expr
+| expr "and"  expr
+| expr "or"	expr
+| "true"
+| "false"
+| "new" type '[' expr ']'
+| expr '#' expr
+| "nil"
+| "nil?" '(' expr ')'
+| "head" '(' expr ')'
+| "tail" '(' expr ')'
+;
 
 
 %%
