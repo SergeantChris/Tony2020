@@ -1,5 +1,5 @@
 %{
-#include <stdio>
+#include <cstdio>
 #include "lexer.hpp"
 %}
 
@@ -8,13 +8,14 @@
 	int val;
 }
 
+%token T_eof  "eof"
 %token T_and	"and"
 %token T_bool	"bool"
 %token T_char	"char"
 %token T_decl	"decl"
 %token T_def	"def"
 %token T_else	"else"
-%token T_elsif	"elsif"
+%token T_elsif  "elsif"
 %token T_end	"end"
 %token T_exit	"exit"
 %token T_false	"false"
@@ -51,9 +52,12 @@
 %right '#'
 %left '+' '-'
 %left '*' '/' "mod"
-%right PSIGN, MSIGN
+%right PSIGN
+%right MSIGN
 
-%expect 1
+//%expect 1
+
+%debug
 
 %%
 
@@ -214,6 +218,7 @@ rval:
 %%
 
 int main() {
+  yydebug = 1;
   int result = yyparse();
   if (result == 0) printf("Success.\n");
   return result;

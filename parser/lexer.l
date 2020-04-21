@@ -2,9 +2,14 @@
 
 %{
 
+#include <cstdio>
+#include <cstdlib>
+#include "lexer.hpp"
+#include "parser.hpp"
+
 int linecount=1;
 int m_comment=0;
-void yyerror (const char msg []);
+void yyerror (const char* msg);
 
 %}
 
@@ -70,23 +75,12 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 
 <<EOF>> { return T_eof; }
 
-. { yyerror("no such token"); }
+. { yyerror("lexer: no such token"); }
 
 %%
 
-void yyerror (const char msg [])
+void yyerror (const char* msg)
 {
   fprintf(stderr, "ERROR, line %d: %s\n", linecount, msg);
   exit(1);
-}
-
-int main ()
-{
-  int token;
-  do {
-    token = yylex();
-    printf("token=%d, lexeme=\"%s\"\n", token, yytext);
-  }
-  while (token != T_eof);
-  return 0;
 }
