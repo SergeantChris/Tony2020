@@ -2,7 +2,8 @@
 
 %{
 
-int  linecount=1;
+int linecount=1;
+int m_comment=0;
 void yyerror (const char msg []);
 
 %}
@@ -13,7 +14,7 @@ W [ \t\r]
 HEX [0-9|A-F|a-f]
 ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 
-%x COMMENT
+%x M_COMMENT
 
 %%
 
@@ -35,7 +36,7 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "tail"		{ return T_tail; }
 "def"		{ return T_def; }
 "head"		{ return T_head; }
-"nilq"		{ return T_nilq; }
+"nil?"		{ return T_nilq; }
 "true"		{ return T_true; }
 "else"		{ return T_else; }
 "or"		{ return T_or; }
@@ -57,6 +58,12 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 [\(|\)|\[|\]|,|;|:]	{ return yytext[0]; }
 ":="				{ return T_assign; }
 %[^\n]*\n			{ linecount++; }
+
+"<*"            { BEGIN(M_COMMENT); m_comment++; }
+<M_COMMENT>"*>" { m_comment--; if(m_comment==0) BEGIN(INITIAL); }
+<M_COMMENT>"<*"   { m_comment++; }
+<M_COMMENT>\n   { /*nothing*/ }
+<M_COMMENT>.    { /*nothing*/ }
 
 {W}+ {/*nothing*/}
 \n					{ linecount++; }
@@ -83,7 +90,3 @@ int main ()
   while (token != T_eof);
   return 0;
 }
-
-/*
-flex -s -o lexer.c firstLexer.l
-cc -o lexer lexer.c */
