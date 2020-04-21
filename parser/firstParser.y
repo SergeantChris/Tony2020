@@ -4,7 +4,7 @@
 %}
 
 %union{
-	const char * name;
+	const char* name;
 	int val;
 }
 
@@ -40,17 +40,18 @@
 %token T_assign	":="
 
 %token<name> T_id
-%token<val>	T_int_const
-%token<val> T_char_const
+%token<val>	T_constInt
+%token<val> T_constChar
 %token<name> T_string
 
 %left "or"
 %left "and"
-%nonassoc "not"
+%right "not"
 %nonassoc '=' "<>" '<' '>' "<=" ">="
 %right '#'
 %left '+' '-'
 %left '*' '/' "mod"
+%right PSIGN, MSIGN
 
 %expect 1
 
@@ -105,7 +106,7 @@ type: "int"
 | "list" '[' type ']'
 ;
 
-func_decl: "decl" ;
+func_decl: "decl" header;
 
 var_def: type	id_list ;
 
@@ -139,9 +140,12 @@ elsif_clause:
 ;
 
 else_clause:
- "else" ':'
+ "else" ':' stmt_list
 | /* nothing */
 ;
+
+for_clause:
+ "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"
 
 simple:
  "skip"						 /* atom is l-value && expr.type=atom.type */
@@ -177,11 +181,11 @@ expr:
 ;
 
 rval:
-	T_int_const
-| T_char_const
+	T_constInt
+| T_constChar
 | '(' expr ')'
-| '+' expr
-| '-' expr
+| '+' expr %prec PSIGN
+| '-' expr %prec MSIGN
 | expr '+' expr
 | expr '-' expr
 | expr '*' expr
