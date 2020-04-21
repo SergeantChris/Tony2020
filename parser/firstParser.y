@@ -62,41 +62,39 @@ program:
 ;
 
 func_def:
-  "def" header ':' def_list stmt_list "end"
+  "def" header ':' def_list stmt_plus "end"
 ;
 
 def_list:
-  func_def def_list
-| func_decl def_list
-| var_def def_list
-| /* nothing */
+  /* nothing */
+| def_list func_def
+| def_list func_decl
+| def_list var_def
 ;
 
 header:
-  type T_id	'(' formal_list ')'
-| T_id '(' formal_list ')'
+  type T_id	'(' formal_opt ')'
+| T_id '(' formal_opt ')'
+;
+
+formal_opt:
+  formal_list
+| /* nothing */
 ;
 
 formal_list:
-  formal formal_full
-| /* nothing */
-;
-
-formal_full:
-  ';' formal formal_full
-| /* nothing */
+  formal
+| formal_list ';' formal
 ;
 
 formal:
-  "ref" type	id_par_list
-| type id_par_list
+  "ref" type id_list
+| type id_list
 ;
 
-id_par_list: T_id id_par_full ;
-
-id_par_full :
-  ',' T_id id_par_full
-| /* nothing */
+id_list: 
+  T_id
+| id_list ',' T_id
 ;
 
 type: "int"
@@ -106,77 +104,79 @@ type: "int"
 | "list" '[' type ']'
 ;
 
-func_decl: "decl" header;
-
-var_def: type	id_list ;
-
-id_list: T_id id_full ;
-
-id_full:
- ',' T_id id_full
-| /* nothing */
+func_decl: 
+  "decl" header
 ;
 
-stmt_list: stmt	stmt_full ;
+var_def: 
+  type id_list
+;
 
-stmt_full:
-	stmt
-| /* nothing */
+stmt_plus: 
+  stmt stmt_star
+;
+
+stmt_star:
+  /*nothing*/	
+| stmt_star stmt
 ;
 
 stmt:
- simple
+  simple
 | "exit"
 | "return" expr
 | if_clause
 | for_clause
 ;
 
-if_clause: "if" expr	':' stmt_list	elsif_clause 	else_clause "end" ;
+if_clause: 
+  "if" expr	':' stmt_plus	elsif_clause else_clause "end"
+;
 
 elsif_clause:
-	"elsif"	expr ':' stmt_list	elsif_clause
-| /* nothing */
+  /* nothing */
+| elsif_clause "elsif" expr ':' stmt_plus
 ;
 
 else_clause:
- "else" ':' stmt_list
+  "else" ':' stmt_plus
 | /* nothing */
 ;
 
 for_clause:
- "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"
+  "for" simple_list ';' expr ';' simple_list ':' stmt_plus "end"
+;
 
 simple:
- "skip"						 /* atom is l-value && expr.type=atom.type */
-| atom ":=" expr
+  "skip"		 
+| atom ":=" expr /* atom is l-value && expr.type=atom.type */
 | call
 ;
 
-simple_list: simple simple_full ;
-simple_full: ',' simple simple_full | /* nothing */ ;
+simple_list:
+  simple
+| simple_list ',' simple
+;
 
 call:
- T_id '(' expr_list ')'
+  T_id '(' expr_list ')'
 | T_id '(' ')'
 ;
 
-expr_list: expr expr_full;
-
-expr_full:
- ',' expr expr_full
-| /* nothing */
+expr_list: 
+  expr
+| expr_list ',' expr
 ;
 
 atom:
- T_id
+  T_id
 | T_string
 | call
 | atom '[' expr ']'
 ;
 
 expr:
- atom
+  atom
 | rval
 ;
 
@@ -198,7 +198,7 @@ rval:
 | expr "<=" expr
 | expr ">=" expr
 | "not" expr
-| expr "and"  expr
+| expr "and" expr
 | expr "or"	expr
 | "true"
 | "false"
