@@ -1,7 +1,8 @@
 %{
-#include <cstdio>
+#include <iostream>
 #include <list>
 #include "lexer.hpp"
+#include "ast.hpp"
 
 using namespace std;
 %}
@@ -62,12 +63,15 @@ using namespace std;
   Formal* frml;
   list<Formal>* fl;
   list<const char*> idl;
+  /*
   union type {
-    Type prim;
+    PrimitiveType prim;
     Array* arr;
     List* ls;
     ~type() {}
   };
+  */
+  Type type;
   Stmt* stmt;
   list<shared_ptr<Stmt>>* stmtl;
   Expr* expr;
@@ -130,7 +134,7 @@ formal:
 ;
 
 id_list: 
-  T_id { $$ = new list<const char*>; $$->push_back($1); } //revisit
+  T_id { $$ = new list<const char*>; $$->push_back($1); } //revisit: string?
 | id_list ',' T_id { $1->push_back($3); $$ = $1; }
 ;
 
@@ -138,8 +142,8 @@ type:
   "int" { $$ = TYPE_int; }
 | "bool" { $$ = TYPE_bool; }
 | "char" { $$ = TYPE_char; }
-| type '[' ']' { new (&$$) Array($1); }
-| "list" '[' type ']' { new (&$$) List($3); }
+| type '[' ']' { new (&$$.c) Array($1); }
+| "list" '[' type ']' { new (&$$.c) List($3); }
 ;
 
 func_decl: 
