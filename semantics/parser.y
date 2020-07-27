@@ -1,6 +1,6 @@
 %{
 #include <iostream>
-#include <list>
+#include <vector>
 #include "lexer.hpp"
 #include "ast.hpp"
 
@@ -63,14 +63,6 @@ using namespace std;
   Formal* frml;
   vector<Formal>* fl;
   vector<const char*>* idl;
-  /*
-  union type {
-    PrimitiveType prim;
-    Array* arr;
-    List* ls;
-    ~type() {}
-  };
-  */
   Type type;
   Stmt* stmt;
   vector<shared_ptr<Stmt>>* stmtl;
@@ -153,12 +145,6 @@ func_decl:
 var_def: 
   type id_list { new VarDef($1, $2); }
 ;
-
-/*
-stmt_plus: 
-  stmt stmt_star { $2->push_front(make_shared<Stmt>($1)); $$ = $2; }
-;
-*/
 
 stmt_plus:
   stmt { $$ = new vector<shared_ptr<Stmt>>; $$->push_back(make_shared<Stmt>($1)); }
