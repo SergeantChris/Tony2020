@@ -58,11 +58,11 @@ using namespace std;
   const char* name;
   int val;
   Def* def;
-  list<shared_ptr<Def>>* defl
+  vector<shared_ptr<Def>>* defl;
   Header* h;
   Formal* frml;
-  list<Formal>* fl;
-  list<const char*> idl;
+  vector<Formal>* fl;
+  vector<const char*>* idl;
   /*
   union type {
     PrimitiveType prim;
@@ -73,9 +73,9 @@ using namespace std;
   */
   Type type;
   Stmt* stmt;
-  list<shared_ptr<Stmt>>* stmtl;
+  vector<shared_ptr<Stmt>>* stmtl;
   Expr* expr;
-  list<shared_ptr<Expr>>* exprl;
+  vector<shared_ptr<Expr>>* exprl;
 }
 
 %type<def> func_def func_decl var_def
@@ -107,7 +107,7 @@ func_def:
 ;
 
 def_list:
-  /* nothing */ { $$ = new list<shared_ptr<Def>>; }
+  /* nothing */ { $$ = new vector<shared_ptr<Def>>; }
 | def_list func_def { $1->push_back(make_shared<Def>($2)); $$ = $1; }
 | def_list func_decl { $1->push_back(make_shared<Def>($2)); $$ = $1; }
 | def_list var_def { $1->push_back(make_shared<Def>($2)); $$ = $1; }
@@ -124,7 +124,7 @@ formal_opt:
 ;
 
 formal_list:
-  formal { $$ = new list<Formal>; $$->push_back(*$1); }
+  formal { $$ = new vector<Formal>; $$->push_back(*$1); }
 | formal_list ';' formal { $1->push_back(*$3); $$ = $1; }
 ;
 
@@ -134,7 +134,7 @@ formal:
 ;
 
 id_list: 
-  T_id { $$ = new list<const char*>; $$->push_back($1); } //revisit: string?
+  T_id { $$ = new vector<const char*>; $$->push_back($1); } //revisit: string?
 | id_list ',' T_id { $1->push_back($3); $$ = $1; }
 ;
 
@@ -154,12 +154,19 @@ var_def:
   type id_list { new VarDef($1, $2); }
 ;
 
+/*
 stmt_plus: 
   stmt stmt_star { $2->push_front(make_shared<Stmt>($1)); $$ = $2; }
 ;
+*/
+
+stmt_plus:
+  stmt { $$ = new vector<shared_ptr<Stmt>>; $$->push_back(make_shared<Stmt>($1)); }
+| stmt_plus stmt { $1->push_back(make_shared<Stmt>($2)); $$ = $1; }
+;
 
 stmt_star:
-  /*nothing*/	{ $$ = new list<shared_ptr<Stmt>>; }
+  /*nothing*/	{ $$ = new vector<shared_ptr<Stmt>>; }
 | stmt_star stmt { $1->push_back(make_shared<Stmt>($2)); $$ = $1; }
 ;
 
@@ -178,7 +185,7 @@ if_clause:
 ;
 
 elsif_clause:
-  /* nothing */ { $$ = new list<shared_ptr<Stmt>>; }
+  /* nothing */ { $$ = new vector<shared_ptr<Stmt>>; }
 | elsif_clause "elsif" expr ':' stmt_plus { 
     $1->push_back(shared_ptr<Stmt>(new Branch($3, $5))); $$ = $1; 
   }
@@ -196,7 +203,7 @@ for_clause:
 ;
 
 simple_list:
-  simple { $$ = new list<shared_ptr<Stmt>>; $$->push_back(make_shared<Stmt>($1)); }
+  simple { $$ = new vector<shared_ptr<Stmt>>; $$->push_back(make_shared<Stmt>($1)); }
 | simple_list ',' simple { $1->push_back(make_shared<Stmt>($3)); $$ = $1; }
 ;
 
@@ -213,7 +220,7 @@ call:
 ;
 
 expr_list: 
-  expr { $$ = new list<shared_ptr<Expr>>; $$->push_back(make_shared<Expr>($1)); }
+  expr { $$ = new vector<shared_ptr<Expr>>; $$->push_back(make_shared<Expr>($1)); }
 | expr_list ',' expr { $1->push_back(make_shared<Expr>($3)); $$ = $1; }
 ;
 
