@@ -1,6 +1,7 @@
 %{
 #include <iostream>
 #include <vector>
+#include <string>
 #include "lexer.hpp"
 #include "ast.hpp"
 
@@ -55,14 +56,14 @@ using namespace std;
 %right MSIGN
 
 %union{
-  const char* name;
+  string name;
   int val;
   Def* def;
   vector<shared_ptr<Def>>* defl;
   Header* h;
   Formal* frml;
   vector<Formal>* fl;
-  vector<const char*>* idl;
+  vector<string>* idl;
   Type type;
   Stmt* stmt;
   vector<shared_ptr<Stmt>>* stmtl;
@@ -126,7 +127,7 @@ formal:
 ;
 
 id_list: 
-  T_id { $$ = new vector<const char*>; $$->push_back($1); } //revisit: string?
+  T_id { $$ = new vector<string>; $$->push_back($1); }
 | id_list ',' T_id { $1->push_back($3); $$ = $1; }
 ;
 
