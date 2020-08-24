@@ -113,6 +113,7 @@ public:
 			first = false;
 			out << i;
 		}
+		out << ")";
 	}
 private:
 	Type type;
@@ -123,7 +124,17 @@ class Header: public ASTnode {
 public:
 	Header(string i, vector<Formal>* f, Type t = nullptr): id(i), fl(f), type(t) {}
 	~Header() { delete fl; }
-	virtual void printNode(ostream &out) const override {}
+	virtual void printNode(ostream &out) const override {
+		out << "Header(" << id << ", ";
+		if(type != nullptr) out << type << ", ";
+		bool first = true;
+		for(string f: *fl) {
+			if(!first) out << ", ";
+			first = false;
+			out << f;
+		}
+		out << ")";
+	}
 private:
 	string id;
 	vector<Formal>* fl;
@@ -139,7 +150,17 @@ public:
 		}
 	}
 	~Formal() { delete idl; }
-	virtual void printNode(ostream &out) const override {}
+	virtual void printNode(ostream &out) const override {
+		out << "Formal(" << type << ", ";
+		if(call_by_reference == true) out << "cbr" << ", ";
+		bool first = true;
+		for(string i: *idl) {
+			if(!first) out << ", ";
+			first = false;
+			out << i;
+		}
+		out << ")";
+	}
 private:
 	Type type;
 	vector<string>* idl;
@@ -160,7 +181,9 @@ class Assign: public Simple {
 public:
 	Assign(Atom* a, Expr* e): atom(a), expr(e) {}
 	~Assign() { delete atom; delete expr; }
-	virtual void printNode(ostream &out) const override {}
+	virtual void printNode(ostream &out) const override {
+		out << "Assign(" << *atom << *expr << ")";
+	}
 private:
 	Atom* atom;
 	Expr* expr;
@@ -170,7 +193,16 @@ class Call: public Simple {
 public:
 	Call(string i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprl(e) {}
 	~Call() { delete exprl; }
-	virtual void printNode(ostream &out) const override {}
+	virtual void printNode(ostream &out) const override {
+		out << "Call(" << id << ", ";
+		bool first = true;
+		for(shared_ptr<Expr> e: *exprl) {
+			if(!first) out << ", ";
+			first = false;
+			out << *e;
+		}
+		out << ")";
+	}
 private:
 	string id;
 	vector<shared_ptr<Expr>>* exprl; 
@@ -180,7 +212,11 @@ class Return: public Stmt {
 public:
 	Return(Expr* v = nullptr): ret_val(v) {}
 	~Return() { delete ret_val; }
-	virtual void printNode(ostream &out) const override {}
+	virtual void printNode(ostream &out) const override {
+		out << "Return(";
+		if(ret_val != nullptr) out << *ret_val;
+		out << ")";
+	}
 private:
 	Expr* ret_val;
 };
@@ -192,7 +228,24 @@ public:
 		vector<shared_ptr<Stmt>>* eif = nullptr,
 		Branch* e = nullptr): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
 	~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
-	virtual void printNode(ostream &out) const override {}
+	virtual void printNode(ostream &out) const override {
+		out << "Branch(";
+		bool first = true;
+		for(shared_ptr<Stmt> s: *cond_true) {
+			if(!first) out << ", ";
+			first = false;
+			out << *s;
+		}
+		out << ", " << condition;
+		if(elsif_branches != nullptr) {
+			for(shared_ptr<Stmt> s: *elsif_branches) {
+				out << ", ";
+				out << *s;
+			}
+		}
+		if(else_branch != nullptr) out << ", " << *else_branch;
+		out << ")";
+	}
 private:
 	vector<shared_ptr<Stmt>>* cond_true;
 	Expr* condition;
@@ -207,7 +260,25 @@ public:
 		vector<shared_ptr<Stmt>>* s,
 		vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct) {}
 	~Loop() { delete inits; delete condition; delete steps; delete cond_true; }
-	virtual void printNode(ostream &out) const override {}
+	virtual void printNode(ostream &out) const override {
+		out << "Loop(";
+		bool first = true;
+		for(shared_ptr<Stmt> s: *inits) {
+			if(!first) out << ", ";
+			first = false;
+			out << *s;
+		}
+		out << ", " << condition;
+		for(shared_ptr<Stmt> s: *steps) {
+			out << ", ";
+			out << *s;
+		}
+		for(shared_ptr<Stmt> s: *cond_true) {
+			out << ", ";
+			out << *s;
+		}
+		out << ")";
+	}
 private:
 	vector<shared_ptr<Stmt>>* inits;
 	Expr* condition;
