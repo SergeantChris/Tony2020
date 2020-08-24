@@ -120,47 +120,109 @@ private:
 };
 
 class Header: public ASTnode {
-
+public:
+	Header(string i, vector<Formal>* f, Type t = nullptr): id(i), fl(f), type(t) {}
+	~Header() { delete fl; }
+	virtual void printNode(ostream &out) const override {}
+private:
+	string id;
+	vector<Formal>* fl;
+	Type type;
 };
 
 class Formal: public ASTnode {
-
+public:
+	Formal(Type t, vector<string>* i, string cb): type(t), idl(i) {
+		switch(cb) {
+			case "cbv": call_by_reference = false; break;
+			case "cbr": call_by_reference = true; break; 
+		}
+	}
+	~Formal() { delete idl; }
+	virtual void printNode(ostream &out) const override {}
+private:
+	Type type;
+	vector<string>* idl;
+	bool call_by_reference;
 };
 
 class Stmt: public ASTnode { //abstract class
-
+public:
+	virtual ~Stmt() {}
 };
 
 class Simple: public Stmt { //abstract class
-
+public:
+	virtual ~Simple() {}
 };
 
 class Assign: public Simple {
-
+public:
+	Assign(Atom* a, Expr* e): atom(a), expr(e) {}
+	~Assign() { delete atom; delete expr; }
+	virtual void printNode(ostream &out) const override {}
+private:
+	Atom* atom;
+	Expr* expr;
 };
 
 class Call: public Simple {
-
+public:
+	Call(string i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprl(e) {}
+	~Call() { delete exprl; }
+	virtual void printNode(ostream &out) const override {}
+private:
+	string id;
+	vector<shared_ptr<Expr>>* exprl; 
 };
 
 class Return: public Stmt {
-
+public:
+	Return(Expr* v = nullptr): ret_val(v) {}
+	~Return() { delete ret_val; }
+	virtual void printNode(ostream &out) const override {}
+private:
+	Expr* ret_val;
 };
 
 class Branch: public Stmt {
-
+public:
+	Branch(vector<shared_ptr<Stmt>>* ct, 
+		Expr* c = new Const("true"), 
+		vector<shared_ptr<Stmt>>* eif = nullptr,
+		Branch* e = nullptr): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
+	~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
+	virtual void printNode(ostream &out) const override {}
+private:
+	vector<shared_ptr<Stmt>>* cond_true;
+	Expr* condition;
+	vector<shared_ptr<Stmt>>* elsif_branches;
+	Branch* else_branch;
 };
 
 class Loop: public Stmt {
-
+public:
+	Loop(vector<shared_ptr<Stmt>>* i, 
+		Expr* c, 
+		vector<shared_ptr<Stmt>>* s,
+		vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct) {}
+	~Loop() { delete inits; delete condition; delete steps; delete cond_true; }
+	virtual void printNode(ostream &out) const override {}
+private:
+	vector<shared_ptr<Stmt>>* inits;
+	Expr* condition;
+	vector<shared_ptr<Stmt>>* steps;
+	vector<shared_ptr<Stmt>>* cond_true;
 };
 
 class Expr: public ASTnode { //abstract class
 public:
-  void type_check(Type t) {
-    sem();
-    if (type != t) yyerror("Type mismatch");
-  }
+	/*
+	void type_check(Type t) {
+		sem();
+		if (type != t) yyerror("Type mismatch");
+	}
+	*/
 protected:
   Type type;
 };
