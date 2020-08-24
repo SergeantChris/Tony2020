@@ -159,22 +159,22 @@ stmt_star:
 
 stmt:
   simple { $$ = $1; }
-| "exit" { $$ = new Return($1); }
-| "return" expr { $$ = new Return($1, $2); }
+| "exit" { $$ = new Return(); }
+| "return" expr { $$ = new Return($2); }
 | if_clause { $$ = $1; }
 | for_clause { $$ = $1; }
 ;
 
 if_clause: 
   "if" expr	':' stmt_plus	elsif_clause else_clause "end" {
-    $$ = new Branch($2, $4, $5, $6);
+    $$ = new Branch($4, $2, $5, $6);
   }
 ;
 
 elsif_clause:
   /* nothing */ { $$ = new vector<shared_ptr<Stmt>>; }
 | elsif_clause "elsif" expr ':' stmt_plus { 
-    $1->push_back(shared_ptr<Stmt>(new Branch($3, $5))); $$ = $1; 
+    $1->push_back(shared_ptr<Stmt>(new Branch($5, $3))); $$ = $1; 
   }
 ;
 
