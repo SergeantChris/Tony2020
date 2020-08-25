@@ -219,7 +219,7 @@ expr:
 
 atom:
   T_id { $$ = new Id($1); }
-| T_string { $$ = new String($1, new Array(TYPE_char)); }
+| T_string { $$ = new String($1); }
 | call { $$ = new RetVal($1); } //semcheck if has return type
 | atom '[' expr ']' { $$ = new IndexAccess($1, $3); }
 ;

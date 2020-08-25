@@ -299,10 +299,11 @@ protected:
   Type type; //must go to symbol table
 };
 
-class Const: public Expr {
+class Const: virtual public Expr {
 public:
 	Const(int i): integer(i) {}
 	Const(char c): character(c) {}
+	Const(const char* s): str(s) {}
 	Const(string v) {
 		switch(v) {
 			case "true": boolean = true; break; 
@@ -315,6 +316,7 @@ private:
 	Union {
 		int integer;
 		char character;
+		const char* str;
 		bool boolean;
 		//weird list thing for nil
 	};
@@ -332,7 +334,7 @@ class MemAlloc: public Expr {
 
 };
 
-class Atom: public Expr { //abstract class
+class Atom: virtual public Expr { //abstract class
 public:
 	virtual ~Atom() {}
 };
@@ -345,13 +347,10 @@ private:
 	const char* id;
 };
 
-class String: public Atom public Const {
+class String: public Atom, public Const {
 public:
-	String(const char* s, Type t): str(s), type(t) {}
+	String(const char* s): Const(s) {}
 	~String() {}
-private:
-	const char* str;
-	Type type;
 };
 
 class RetVal: public Atom {
