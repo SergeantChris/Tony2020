@@ -308,7 +308,7 @@ public:
 		switch(v) {
 			case "true": boolean = true; break; 
 			case "false": boolean = false; break;
-			case "nil": //no idea
+			case "nil": //no idea //must check l-val for type?
 		}
 	} 
 	~Const() {}
@@ -323,15 +323,31 @@ private:
 };
 
 class UnOp: public Expr {
-
+public:
+	UnOp(const char* o, Expr* e): op(o), expr(e) {}
+	~UnOp() { delete expr; }
+private:
+	const char* op; //info will be used in sem / evaluation
+	Expr* expr;
 };
 
 class BinOp: public Expr {
-
+public:
+	BinOp(Expr* e1, const char* o, Expr* e2): op(o), expr1(e1), expr2(e2) {}
+	~BinOp() { delete expr1; delete expr2; }
+private:
+	const char* op; //info will be used in sem / evaluation
+	Expr* expr1;
+	Expr* expr2;
 };
 
 class MemAlloc: public Expr {
-
+public:
+	MemAlloc(Type t, Expr* e): type(t), expr(e) {}
+	~MemAlloc() { delete expr; }
+private:
+	Type type;
+	Expr* expr;
 };
 
 class Atom: virtual public Expr { //abstract class
