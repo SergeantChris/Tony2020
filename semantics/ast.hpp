@@ -103,12 +103,12 @@ private:
 
 class VarDef: public Def {
 public:
-	VarDef(Type t, vector<string>* i): type(t), idl(i) {}
+	VarDef(Type t, vector<const char*>* i): type(t), idl(i) {}
 	~VarDef() { delete idl; }
 	virtual void printNode(ostream &out) const override {
 		out << "VarDef(" << type << ", ";
 		bool first = true;
-		for(string i: *idl) {
+		for(const char* i: *idl) {
 			if(!first) out << ", ";
 			first = false;
 			out << i;
@@ -117,18 +117,18 @@ public:
 	}
 private:
 	Type type;
-	vector<string>* idl;
+	vector<const char*>* idl;
 };
 
 class Header: public ASTnode {
 public:
-	Header(string i, vector<Formal>* f, Type t = nullptr): id(i), fl(f), type(t) {}
+	Header(const char* i, vector<Formal>* f, Type t = nullptr): id(i), fl(f), type(t) {}
 	~Header() { delete fl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Header(" << id << ", ";
 		if(type != nullptr) out << type << ", ";
 		bool first = true;
-		for(string f: *fl) {
+		for(Formal f: *fl) {
 			if(!first) out << ", ";
 			first = false;
 			out << f;
@@ -136,14 +136,14 @@ public:
 		out << ")";
 	}
 private:
-	string id;
+	const char* id;
 	vector<Formal>* fl;
 	Type type;
 };
 
 class Formal: public ASTnode {
 public:
-	Formal(Type t, vector<string>* i, string cb): type(t), idl(i) {
+	Formal(Type t, vector<const char*>* i, string cb): type(t), idl(i) {
 		switch(cb) {
 			case "cbv": call_by_reference = false; break;
 			case "cbr": call_by_reference = true; break; 
@@ -154,7 +154,7 @@ public:
 		out << "Formal(" << type << ", ";
 		if(call_by_reference == true) out << "cbr" << ", ";
 		bool first = true;
-		for(string i: *idl) {
+		for(const char* i: *idl) {
 			if(!first) out << ", ";
 			first = false;
 			out << i;
@@ -163,7 +163,7 @@ public:
 	}
 private:
 	Type type;
-	vector<string>* idl;
+	vector<const char*>* idl;
 	bool call_by_reference;
 };
 
@@ -191,7 +191,7 @@ private:
 
 class Call: public Simple {
 public:
-	Call(string i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprl(e) {}
+	Call(const char* i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprl(e) {}
 	~Call() { delete exprl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Call(" << id << ", ";
@@ -204,7 +204,7 @@ public:
 		out << ")";
 	}
 private:
-	string id;
+	const char* id;
 	vector<shared_ptr<Expr>>* exprl; 
 };
 
@@ -288,6 +288,7 @@ private:
 
 class Expr: public ASTnode { //abstract class
 public:
+	virtual ~Expr() {}
 	/*
 	void type_check(Type t) {
 		sem();
@@ -295,45 +296,77 @@ public:
 	}
 	*/
 protected:
-  Type type;
+  Type type; //must go to symbol table
+};
+
+class Const: public Expr {
+public:
+	Const(int i): integer(i) {}
+	Const(char c): character(c) {}
+	Const(string v) {
+		switch(v) {
+			case "true": boolean = true; break; 
+			case "false": boolean = false; break;
+			case "nil": //no idea
+		}
+	} 
+	~Const() {}
+private:
+	Union {
+		int integer;
+		char character;
+		bool boolean;
+		//weird list thing for nil
+	};
+};
+
+class UnOp: public Expr {
+
+};
+
+class BinOp: public Expr {
+
+};
+
+class MemAlloc: public Expr {
+
 };
 
 class Atom: public Expr { //abstract class
-
+public:
+	virtual ~Atom() {}
 };
 
 class Id: public Atom {
-
+public:
+	Id(const char* i): id(i) {}
+	~Id() {}
+private:
+	const char* id;
 };
 
-class String: public Atom {
-
+class String: public Atom public Const {
+public:
+	String(const char* s, Type t): str(s), type(t) {}
+	~String() {}
+private:
+	const char* str;
+	Type type;
 };
 
 class RetVal: public Atom {
-
+public:
+	RetVal(Call* c): call(c) {}
+	~RetVal() { delete call; }
+private:
+	Call* call;
 };
 
 class IndexAccess: public Atom {
-
-};
-
-class Rval: public Expr { //abstract class
-
-};
-
-class Const: public Rval {
-
-}
-
-class UnOp: public Rval {
-
-};
-
-class BinOp: public Rval {
-
-};
-
-class MemAlloc: public Rval {
-
+public:
+	IndexAccess(Atom* a, Expr* e): atom(a), expr(e) {}
+	~IndexAccess() { delete atom; delete expr; }
+private:
+	Atom* atom;
+	Expr* expr;
 };

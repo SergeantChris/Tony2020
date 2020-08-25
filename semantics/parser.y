@@ -1,7 +1,7 @@
 %{
 #include <iostream>
 #include <vector>
-#include <string>
+//#include <string>
 #include "lexer.hpp"
 #include "ast.hpp"
 
@@ -41,8 +41,8 @@ using namespace std;
 %token T_assign	":="
 
 %token<name> T_id
-%token<val>	T_constInt
-%token<val> T_constChar
+%token<integer>	T_constInt
+%token<character> T_constChar
 %token<name> T_string
 
 %left "or"
@@ -56,14 +56,15 @@ using namespace std;
 %right MSIGN
 
 %union{
-  string name;
-  int val;
+  const char* name;
+  int integer;
+  char character;
   Def* def;
   vector<shared_ptr<Def>>* defl;
   Header* h;
   Formal* frml;
   vector<Formal>* fl;
-  vector<string>* idl;
+  vector<const char*>* idl;
   Type type;
   Stmt* stmt;
   vector<shared_ptr<Stmt>>* stmtl;
@@ -127,7 +128,7 @@ formal:
 ;
 
 id_list: 
-  T_id { $$ = new vector<string>; $$->push_back($1); }
+  T_id { $$ = new vector<const char*>; $$->push_back($1); }
 | id_list ',' T_id { $1->push_back($3); $$ = $1; }
 ;
 
@@ -218,7 +219,7 @@ expr:
 
 atom:
   T_id { $$ = new Id($1); }
-| T_string { $$ = new String($1); }
+| T_string { $$ = new String($1, new Array(TYPE_char)); }
 | call { $$ = new RetVal($1); } //semcheck if has return type
 | atom '[' expr ']' { $$ = new IndexAccess($1, $3); }
 ;
