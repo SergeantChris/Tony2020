@@ -301,31 +301,38 @@ protected:
 
 class Const: virtual public Expr {
 public:
-	Const(int i): integer(i) {}
-	Const(char c): character(c) {}
-	Const(const char* s): str(s) {}
+	Const(int i): tc.integer(i) {}
+	Const(char c): tc.character(c) {}
+	Const(const char* s): tc.str(s) {}
 	Const(string v) {
 		switch(v) {
-			case "true": boolean = true; break; 
-			case "false": boolean = false; break;
+			case "true": tc.boolean = true; break; 
+			case "false": tc.boolean = false; break;
 			case "nil": //no idea //must check l-val for type?
 		}
 	} 
 	~Const() {}
+	virtual void printNode(ostream &out) const override {
+		out << "Const(" << tc << ")";
+	}
 private:
-	Union {
+	union TC {
 		int integer;
 		char character;
 		const char* str;
 		bool boolean;
 		//weird list thing for nil
 	};
+	TC tc;
 };
 
 class UnOp: public Expr {
 public:
 	UnOp(const char* o, Expr* e): op(o), expr(e) {}
 	~UnOp() { delete expr; }
+	virtual void printNode(ostream &out) const override {
+		out << "UnOp(" << op << ", " << *expr << ")";
+	}
 private:
 	const char* op; //info will be used in sem / evaluation
 	Expr* expr;
@@ -335,6 +342,9 @@ class BinOp: public Expr {
 public:
 	BinOp(Expr* e1, const char* o, Expr* e2): op(o), expr1(e1), expr2(e2) {}
 	~BinOp() { delete expr1; delete expr2; }
+	virtual void printNode(ostream &out) const override {
+		out << "BinOp(" << *expr1 << ", " << op << ", " << *expr2 << ")";
+	}
 private:
 	const char* op; //info will be used in sem / evaluation
 	Expr* expr1;
@@ -345,6 +355,9 @@ class MemAlloc: public Expr {
 public:
 	MemAlloc(Type t, Expr* e): type(t), expr(e) {}
 	~MemAlloc() { delete expr; }
+	virtual void printNode(ostream &out) const override {
+		out << "MemAlloc(" << type << ", " << *expr << ")";
+	}
 private:
 	Type type;
 	Expr* expr;
@@ -359,6 +372,9 @@ class Id: public Atom {
 public:
 	Id(const char* i): id(i) {}
 	~Id() {}
+	virtual void printNode(ostream &out) const override {
+		out << "Id(" << id << ")";
+	}
 private:
 	const char* id;
 };
@@ -373,6 +389,9 @@ class RetVal: public Atom {
 public:
 	RetVal(Call* c): call(c) {}
 	~RetVal() { delete call; }
+	virtual void printNode(ostream &out) const override {
+		out << "RetVal(" << *call << ")";
+	}
 private:
 	Call* call;
 };
@@ -381,6 +400,9 @@ class IndexAccess: public Atom {
 public:
 	IndexAccess(Atom* a, Expr* e): atom(a), expr(e) {}
 	~IndexAccess() { delete atom; delete expr; }
+	virtual void printNode(ostream &out) const override {
+		out << "IndexAccess(" << *atom << ", " << *expr << ")";
+	}
 private:
 	Atom* atom;
 	Expr* expr;
