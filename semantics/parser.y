@@ -1,8 +1,4 @@
 %{
-#include <iostream>
-#include <vector>
-//#include <string>
-#include "lexer.hpp"
 #include "ast.hpp"
 
 using namespace std;
@@ -40,18 +36,17 @@ using namespace std;
 %token T_ne		"<>"
 %token T_assign	":="
 
-%token<name> T_id
+%token<name> T_id T_string
 %token<integer>	T_constInt
 %token<character> T_constChar
-%token<name> T_string
 
-%left "or"
-%left "and"
-%right "not"
-%nonassoc '=' "<>" '<' '>' "<=" ">="
-%right '#'
-%left '+' '-'
-%left '*' '/' "mod"
+%left<op> "or"
+%left<op> "and"
+%right<op> "not"
+%nonassoc<op> '=' "<>" '<' '>' "<=" ">="
+%right<op> '#'
+%left<op> '+' '-'
+%left<op> '*' '/' "mod"
 %right PSIGN
 %right MSIGN
 
@@ -59,6 +54,8 @@ using namespace std;
   const char* name;
   int integer;
   char character;
+  const char* op;
+  bool boolean;
   Def* def;
   vector<shared_ptr<Def>>* defl;
   Header* h;
@@ -80,7 +77,7 @@ using namespace std;
 %type<idl> id_list
 %type<type> type
 %type<stmt> stmt simple if_clause for_clause else_clause call
-%type<stmtl> stmt_star stmt_plus elsif_clause
+%type<stmtl> /*stmt_star*/ stmt_plus elsif_clause simple_list
 %type<expr> expr atom rval
 %type<exprl> expr_list
 
@@ -153,10 +150,11 @@ stmt_plus:
 | stmt_plus stmt { $1->push_back(make_shared<Stmt>($2)); $$ = $1; }
 ;
 
-stmt_star:
-  /*nothing*/	{ $$ = new vector<shared_ptr<Stmt>>; }
-| stmt_star stmt { $1->push_back(make_shared<Stmt>($2)); $$ = $1; }
-;
+
+//stmt_star:
+//  /*nothing*/	{ $$ = new vector<shared_ptr<Stmt>>; }
+//| stmt_star stmt { $1->push_back(make_shared<Stmt>($2)); $$ = $1; }
+//;
 
 stmt:
   simple { $$ = $1; }
@@ -244,14 +242,14 @@ rval:
 | "not" expr { $$ = new UnOp($1, $2); }
 | expr "and" expr { $$ = new BinOp($1, $2, $3); }
 | expr "or"	expr { $$ = new BinOp($1, $2, $3); }
-| "true" { $$ = new Const($1); }
-| "false" { $$ = new Const($1); }
+| "true" { $$ = new Const("true"); }
+| "false" { $$ = new Const("false"); }
 | "new" type '[' expr ']' { $$ = new MemAlloc($2, $4); }
 | expr '#' expr { $$ = new BinOp($1, $2, $3); }
-| "nil" { $$ = new Const($1); }
-| "nil?" '(' expr ')' { $$ = new UnOp($1, $3); }
-| "head" '(' expr ')' { $$ = new UnOp($1, $3); }
-| "tail" '(' expr ')' { $$ = new UnOp($1, $3); }
+| "nil" { $$ = new Const("nil"); }
+| "nil?" '(' expr ')' { $$ = new UnOp("nil?", $3); }
+| "head" '(' expr ')' { $$ = new UnOp("head", $3); }
+| "tail" '(' expr ')' { $$ = new UnOp("tail", $3); }
 ;
 
 
