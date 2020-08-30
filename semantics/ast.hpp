@@ -189,17 +189,8 @@ public:
 	~String() {}
 };
 
-class Call;
-class RetVal: public Atom {
-public:
-	RetVal(Call* c): call(c) {}
-	~RetVal() { delete call; }
-	virtual void printNode(ostream &out) const override {
-		out << "RetVal(" << *call << ")";
-	}
-private:
-	Call* call;
-};
+//class Call;
+//class RetVal;
 
 class IndexAccess: public Atom {
 public:
@@ -252,6 +243,17 @@ public:
 private:
 	const char* id;
 	vector<shared_ptr<Expr>>* exprl; 
+};
+
+class RetVal: public Atom {
+public:
+	RetVal(Call* c): call(c) {}
+	~RetVal() { delete call; }
+	virtual void printNode(ostream &out) const override {
+		out << "RetVal(" << *call << ")";
+	}
+private:
+	Call* call;
 };
 
 class Return: public Stmt {
@@ -335,10 +337,8 @@ private:
 class Formal: public ASTnode {
 public:
 	Formal(Type t, vector<const char*>* i, string cb): type(t), idl(i) {
-		switch(cb) {
-			case "cbv": call_by_reference = false; break;
-			case "cbr": call_by_reference = true; break; 
-		}
+		if(cb == "cbv") call_by_reference = false; 
+		else if(cb == "cbr") call_by_reference = true;  
 	}
 	~Formal() { delete idl; }
 	virtual void printNode(ostream &out) const override {
@@ -360,11 +360,14 @@ private:
 
 class Header: public ASTnode {
 public:
-	Header(const char* i, vector<Formal>* f, Type t = nullptr): id(i), fl(f), type(t) {}
+	Header(const char* i, vector<Formal>* f, Type t): id(i), fl(f) {
+		*type = t;
+	}
+	Header(const char* i, vector<Formal>* f): id(i), fl(f) {}
 	~Header() { delete fl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Header(" << id << ", ";
-		if(type != nullptr) out << type << ", ";
+		if(type != nullptr) out << *type << ", ";
 		bool first = true;
 		for(Formal f: *fl) {
 			if(!first) out << ", ";
@@ -376,7 +379,7 @@ public:
 private:
 	const char* id;
 	vector<Formal>* fl;
-	Type type;
+	Type* type;
 };
 
 class Def: public ASTnode { //abstract class
