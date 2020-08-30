@@ -1,7 +1,7 @@
 %{
+  
 #include "ast.hpp"
 
-using namespace std;
 %}
 
 %token T_eof  "eof"
