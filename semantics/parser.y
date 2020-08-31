@@ -1,5 +1,5 @@
 %{
-  
+
 #include "ast.hpp"
 
 %}
@@ -65,8 +65,14 @@
   Type type;
   Stmt* stmt;
   vector<shared_ptr<Stmt>>* stmtl;
+  Branch* brn;
+  vector<Branch>* brnl;
+  Simple* sim;
+  vector<shared_ptr<Simple>>* siml;
+  Call* call;
   Expr* expr;
   vector<shared_ptr<Expr>>* exprl;
+  Atom* atom;
 }
 
 %type<def> func_def func_decl var_def
@@ -76,10 +82,16 @@
 %type<fl> formal_list formal_opt
 %type<idl> id_list
 %type<type> type
-%type<stmt> stmt simple if_clause for_clause else_clause call
-%type<stmtl> /*stmt_star*/ stmt_plus elsif_clause simple_list
-%type<expr> expr atom rval
+%type<stmt> stmt for_clause
+%type<stmtl> /*stmt_star*/ stmt_plus
+%type<brn> if_clause else_clause
+%type<brnl> elsif_clause
+%type<sim> simple
+%type<siml> simple_list
+%type<call> call
+%type<expr> expr rval
 %type<exprl> expr_list
+%type<atom> atom
 
 //%expect 1
 
@@ -130,11 +142,11 @@ id_list:
 ;
 
 type: 
-  "int" { $$ = TYPE_int; }
-| "bool" { $$ = TYPE_bool; }
-| "char" { $$ = TYPE_char; }
-| type '[' ']' { new (&$$.c) Array($1); }
-| "list" '[' type ']' { new (&$$.c) List($3); }
+  "int" { $$.p = TYPE_int; }
+| "bool" { $$.p = TYPE_bool; }
+| "char" { $$.p = TYPE_char; }
+| type '[' ']' { new ($$.c) Array($1); }
+| "list" '[' type ']' { new ($$.c) List($3); }
 ;
 
 func_decl: 
@@ -171,9 +183,9 @@ if_clause:
 ;
 
 elsif_clause:
-  /* nothing */ { $$ = new vector<shared_ptr<Stmt>>; }
+  /* nothing */ { $$ = new vector<Branch>; }
 | elsif_clause "elsif" expr ':' stmt_plus { 
-    $1->push_back(shared_ptr<Stmt>(new Branch($5, $3))); $$ = $1; 
+    $1->push_back(*(new Branch($5, $3))); $$ = $1; 
   }
 ;
 
@@ -189,8 +201,8 @@ for_clause:
 ;
 
 simple_list:
-  simple { $$ = new vector<shared_ptr<Stmt>>; $$->push_back(make_shared<Stmt>($1)); }
-| simple_list ',' simple { $1->push_back(make_shared<Stmt>($3)); $$ = $1; }
+  simple { $$ = new vector<shared_ptr<Simple>>; $$->push_back(make_shared<Simple>($1)); }
+| simple_list ',' simple { $1->push_back(make_shared<Simple>($3)); $$ = $1; }
 ;
 
 simple:

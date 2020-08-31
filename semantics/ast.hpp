@@ -16,7 +16,7 @@ class CompositeType;
 union Type {
 	PrimitiveType p;
 	CompositeType* c;
-	~Type() {}
+	//~Type() {} //i dont think ill ever put a primtype in a comptype variable
 };
 
 class CompositeType { //abstract class
@@ -29,7 +29,7 @@ public:
 		return type;
 	}
 protected:
-	string id;
+	string id; //could be enum
 	Type type;
 };
 
@@ -189,9 +189,6 @@ public:
 	~String() {}
 };
 
-//class Call;
-//class RetVal;
-
 class IndexAccess: public Atom {
 public:
 	IndexAccess(Atom* a, Expr* e): atom(a), expr(e) {}
@@ -273,7 +270,7 @@ class Branch: public Stmt {
 public:
 	Branch(vector<shared_ptr<Stmt>>* ct, 
 		Expr* c = new Const("true"), 
-		vector<shared_ptr<Stmt>>* eif = nullptr,
+		vector<Branch>* eif = nullptr,
 		Branch* e = nullptr): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
 	~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
 	virtual void printNode(ostream &out) const override {
@@ -286,9 +283,9 @@ public:
 		}
 		out << ", " << condition;
 		if(elsif_branches != nullptr) {
-			for(shared_ptr<Stmt> s: *elsif_branches) {
+			for(Branch b: *elsif_branches) {
 				out << ", ";
-				out << *s;
+				out << b;
 			}
 		}
 		if(else_branch != nullptr) out << ", " << *else_branch;
@@ -297,27 +294,27 @@ public:
 private:
 	vector<shared_ptr<Stmt>>* cond_true;
 	Expr* condition;
-	vector<shared_ptr<Stmt>>* elsif_branches;
+	vector<Branch>* elsif_branches;
 	Branch* else_branch;
 };
 
 class Loop: public Stmt {
 public:
-	Loop(vector<shared_ptr<Stmt>>* i, 
+	Loop(vector<shared_ptr<Simple>>* i, 
 		Expr* c, 
-		vector<shared_ptr<Stmt>>* s,
+		vector<shared_ptr<Simple>>* s,
 		vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct) {}
 	~Loop() { delete inits; delete condition; delete steps; delete cond_true; }
 	virtual void printNode(ostream &out) const override {
 		out << "Loop(";
 		bool first = true;
-		for(shared_ptr<Stmt> s: *inits) {
+		for(shared_ptr<Simple> s: *inits) {
 			if(!first) out << ", ";
 			first = false;
 			out << *s;
 		}
 		out << ", " << condition;
-		for(shared_ptr<Stmt> s: *steps) {
+		for(shared_ptr<Simple> s: *steps) {
 			out << ", ";
 			out << *s;
 		}
@@ -328,9 +325,9 @@ public:
 		out << ")";
 	}
 private:
-	vector<shared_ptr<Stmt>>* inits;
+	vector<shared_ptr<Simple>>* inits;
 	Expr* condition;
-	vector<shared_ptr<Stmt>>* steps;
+	vector<shared_ptr<Simple>>* steps;
 	vector<shared_ptr<Stmt>>* cond_true;
 };
 
@@ -338,7 +335,7 @@ class Formal: public ASTnode {
 public:
 	Formal(Type t, vector<const char*>* i, string cb): type(t), idl(i) {
 		if(cb == "cbv") call_by_reference = false; 
-		else if(cb == "cbr") call_by_reference = true;  
+		else if(cb == "cbr") call_by_reference = true;  //could be enum
 	}
 	~Formal() { delete idl; }
 	virtual void printNode(ostream &out) const override {
@@ -385,6 +382,8 @@ private:
 class Def: public ASTnode { //abstract class
 public:
 	virtual ~Def() {}
+	//virtual void printNode(ostream &out) const override;
+	//i think it shouldnt be a problem
 };
 
 class FuncDef: public Def {
