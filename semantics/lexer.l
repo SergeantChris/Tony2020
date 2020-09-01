@@ -4,12 +4,13 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include "ast.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
 
 int linecount=1;
 int m_comment=0;
-void yyerror (const char* msg);
+//void yyerror (const char* msg);
 
 %}
 
