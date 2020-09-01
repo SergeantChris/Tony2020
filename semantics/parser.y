@@ -108,12 +108,12 @@ func_def:
     $$ = new FuncDef($2, $4, $5);
   }
 ;
-
+//make objects derived class
 def_list:
   /* nothing */ { $$ = new vector<shared_ptr<Def>>; }
-| def_list func_def { $1->push_back(make_shared<Def>($2)); $$ = $1; }
-| def_list func_decl { $1->push_back(make_shared<Def>($2)); $$ = $1; }
-| def_list var_def { $1->push_back(make_shared<Def>($2)); $$ = $1; }
+| def_list func_def { $1->push_back(shared_ptr<Def>($2)); $$ = $1; }
+| def_list func_decl { $1->push_back(shared_ptr<Def>($2)); $$ = $1; }
+| def_list var_def { $1->push_back(shared_ptr<Def>($2)); $$ = $1; }
 ;
 
 header:
@@ -158,14 +158,14 @@ var_def:
 ;
 
 stmt_plus:
-  stmt { $$ = new vector<shared_ptr<Stmt>>; $$->push_back(make_shared<Stmt>($1)); }
-| stmt_plus stmt { $1->push_back(make_shared<Stmt>($2)); $$ = $1; }
+  stmt { $$ = new vector<shared_ptr<Stmt>>; $$->push_back(shared_ptr<Stmt>($1)); }
+| stmt_plus stmt { $1->push_back(shared_ptr<Stmt>($2)); $$ = $1; }
 ;
 
 
 //stmt_star:
 //  /*nothing*/	{ $$ = new vector<shared_ptr<Stmt>>; }
-//| stmt_star stmt { $1->push_back(make_shared<Stmt>($2)); $$ = $1; }
+//| stmt_star stmt { $1->push_back(shared_ptr<Stmt>($2)); $$ = $1; }
 //;
 
 stmt:
@@ -201,8 +201,8 @@ for_clause:
 ;
 
 simple_list:
-  simple { $$ = new vector<shared_ptr<Simple>>; $$->push_back(make_shared<Simple>($1)); }
-| simple_list ',' simple { $1->push_back(make_shared<Simple>($3)); $$ = $1; }
+  simple { $$ = new vector<shared_ptr<Simple>>; $$->push_back(shared_ptr<Simple>($1)); }
+| simple_list ',' simple { $1->push_back(shared_ptr<Simple>($3)); $$ = $1; }
 ;
 
 simple:
@@ -218,8 +218,8 @@ call:
 ;
 
 expr_list: 
-  expr { $$ = new vector<shared_ptr<Expr>>; $$->push_back(make_shared<Expr>($1)); }
-| expr_list ',' expr { $1->push_back(make_shared<Expr>($3)); $$ = $1; }
+  expr { $$ = new vector<shared_ptr<Expr>>; $$->push_back(shared_ptr<Expr>($1)); }
+| expr_list ',' expr { $1->push_back(shared_ptr<Expr>($3)); $$ = $1; }
 ;
 
 expr:
