@@ -2,6 +2,8 @@
 
 #include "ast.hpp"
 
+extern FILE* yyin;
+
 %}
 
 %token T_eof  "eof"
@@ -267,8 +269,18 @@ rval:
 
 %%
 
-int main() {
+int main(int argc, char** argv) {
   yydebug = 1;
+  if(argc != 2) {
+    cout << "1 argument expected" << endl;
+    exit(1);
+  }
+  FILE* f = fopen(argv[1], "r");
+  if(!f) {
+    cout << "File not found" << endl;
+    return -1;
+  }
+  yyin = f;
   int result = yyparse();
   if (result == 0) printf("Success.\n");
   return result;
