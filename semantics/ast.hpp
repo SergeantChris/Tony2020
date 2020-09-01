@@ -72,10 +72,11 @@ class ASTnode { //abstract class
 public:
 	virtual ~ASTnode() {}
 	virtual void printNode(ostream &out) const = 0;
-	virtual void sem() {}
+	//virtual void sem() {}
 };
 
 inline ostream& operator<<(ostream &out, const ASTnode &n) {
+	cout << "GEIA SAAAAS eimai o" << endl;
 	n.printNode(out);
 	return out;
 }
@@ -363,10 +364,11 @@ public:
 	Header(const char* i, vector<Formal>* f, Type t): id(i), fl(f) {
 		*type = t;
 	}
-	Header(const char* i, vector<Formal>* f): id(i), fl(f) {}
+	Header(const char* i, vector<Formal>* f): id(i), fl(f) { cout <<"outeedw"<< i << endl; string s(i); id = s.c_str(); this->printNode(cout); }
 	~Header() { delete fl; }
 	virtual void printNode(ostream &out) const override {
-		out << "Header(" << id << ", ";
+		out << "Header("; //<< id << ", ";
+		out << id;
 		if(type != nullptr) out << *type << ", ";
 		bool first = true;
 		for(Formal f: *fl) {
@@ -379,7 +381,7 @@ public:
 private:
 	const char* id;
 	vector<Formal>* fl;
-	Type* type;
+	Type* type = nullptr;
 };
 
 class Def: public ASTnode { //abstract class

@@ -4,9 +4,12 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
+
+using namespace std;
 
 int linecount=1;
 int m_comment=0;
@@ -51,18 +54,18 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "not"		{ return T_not; }
 "elsif"		{ return T_elsif; }
 
-{L}({L}|{D}|_|\?)* {return T_id;}
-{D}+ { return T_constInt; }
-\"([^\n\"\'\\]|{ESCAPE})*\" { return T_string; }
-\'([^\"\'\\]|{ESCAPE})\' { return T_constChar; }
-[+|\-|*|/|#|=|<|>] {return yytext[0];}
+{L}({L}|{D}|_|\?)* { yylval.name = string(yytext).c_str(); return T_id;}
+{D}+ { yylval.integer = atoi(yytext); return T_constInt; }
+\"([^\n\"\'\\]|{ESCAPE})*\" { string s(yytext); string inside = s.substr(1, s.size()-1); yylval.name = inside.c_str(); return T_string; }
+\'([^\"\'\\]|{ESCAPE})\' { yylval.character = yytext[1]; return T_constChar; }
 
-"<="				{ return T_le;	}
-">="				{ return T_ge;}
-"<>"				{ return T_ne;}
+[+|\-|*|/|#|=|<|>] { yylval.op = string(yytext).c_str; return yytext[0]; }
+"<="				{ yylval.op = string(yytext).c_str; return T_le; }
+">="				{ yylval.op = string(yytext).c_str; return T_ge; }
+"<>"				{ yylval.op = string(yytext).c_str; return T_ne; }
+[\(|\)|\[|\]|,|;|:]	{ yylval.op = string(yytext).c_str; return yytext[0]; }
+":="				{ yylval.op = string(yytext).c_str; return T_assign; }
 
-[\(|\)|\[|\]|,|;|:]	{ return yytext[0]; }
-":="				{ return T_assign; }
 %[^\n]*\n			{ linecount++; }
 
 "<*"            { BEGIN(M_COMMENT); m_comment++; }
@@ -72,6 +75,7 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 <M_COMMENT>.    { /*nothing*/ }
 
 {W}+ {/*nothing*/}
+
 \n					{ linecount++; }
 
 <<EOF>> { return T_eof; }

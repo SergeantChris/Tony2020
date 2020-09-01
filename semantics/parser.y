@@ -102,7 +102,7 @@ extern FILE* yyin;
 %%
 
 program:
-  func_def { /*$1->sem();*/ cout << "AST: " << *$1 << endl; }
+  func_def "eof" { /*$1->sem();*/ cout << "AST: " << *$1 << endl; return 0; }
 ;
 
 func_def:
@@ -120,7 +120,7 @@ def_list:
 
 header:
   type T_id	'(' formal_opt ')' { $$ = new Header($2, $4, $1); }
-| T_id '(' formal_opt ')' { $$ = new Header($1, $3); }
+| T_id '(' formal_opt ')' {cout<<$1<<"outeedw"<<endl<<endl; $$ = new Header($1, $3); }
 ;
 
 formal_opt:
