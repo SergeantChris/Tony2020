@@ -54,17 +54,17 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "not"		{ return T_not; }
 "elsif"		{ return T_elsif; }
 
-{L}({L}|{D}|_|\?)* { yylval.name = string(yytext).c_str(); return T_id;}
+{L}({L}|{D}|_|\?)* { yylval.cstr = strdup(yytext); return T_id;}
 {D}+ { yylval.integer = atoi(yytext); return T_constInt; }
-\"([^\n\"\'\\]|{ESCAPE})*\" { string s(yytext); string inside = s.substr(1, s.size()-1); yylval.name = inside.c_str(); return T_string; }
+\"([^\n\"\'\\]|{ESCAPE})*\" { string s(yytext); string inside = s.substr(1, s.size()-1); yylval.cstr = inside.c_str(); return T_string; }
 \'([^\"\'\\]|{ESCAPE})\' { yylval.character = yytext[1]; return T_constChar; }
 
-[+|\-|*|/|#|=|<|>] { yylval.op = string(yytext).c_str; return yytext[0]; }
-"<="				{ yylval.op = string(yytext).c_str; return T_le; }
-">="				{ yylval.op = string(yytext).c_str; return T_ge; }
-"<>"				{ yylval.op = string(yytext).c_str; return T_ne; }
-[\(|\)|\[|\]|,|;|:]	{ yylval.op = string(yytext).c_str; return yytext[0]; }
-":="				{ yylval.op = string(yytext).c_str; return T_assign; }
+[+|\-|*|/|#|=|<|>] { return yytext[0]; }
+"<="				{ return T_le; }
+">="				{ return T_ge; }
+"<>"				{ return T_ne; }
+[\(|\)|\[|\]|,|;|:]	{ return yytext[0]; }
+":="				{ return T_assign; }
 
 %[^\n]*\n			{ linecount++; }
 

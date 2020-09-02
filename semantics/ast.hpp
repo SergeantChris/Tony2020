@@ -39,6 +39,7 @@ protected:
 class Array: public CompositeType {
 public:
 	Array(Type t) {
+		cout << "this not ok :(" << endl;
 		id = "array";
 		type = t;
 	}
@@ -124,7 +125,7 @@ private:
 	union TC {
 		int integer;
 		char character;
-		const char* str;
+		const char* str; //cannot be string
 		bool boolean;
 		//weird list thing for nil
 	};
@@ -142,7 +143,7 @@ public:
 		out << "UnOp(" << op << ", " << *expr << ")";
 	}
 private:
-	const char* op; //info will be used in sem / evaluation
+	const char* op; //can be string! //info will be used in sem / evaluation
 	Expr* expr;
 };
 
@@ -179,7 +180,7 @@ public:
 class Id: public Atom {
 public:
 	Id(const char* i): id(i) {}
-	~Id() {}
+	~Id() { delete id; }
 	virtual void printNode(ostream &out) const override {
 		out << "Id(" << id << ")";
 	}
@@ -230,7 +231,7 @@ private:
 class Call: public Simple {
 public:
 	Call(const char* i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprl(e) {}
-	~Call() { delete exprl; }
+	~Call() { delete id; delete exprl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Call(" << id << ", ";
 		bool first = true;
@@ -364,17 +365,16 @@ public:
 	Header(const char* i, vector<Formal>* f, Type t): id(i), fl(f) {
 		*type = t;
 	}
-	Header(const char* i, vector<Formal>* f): id(i), fl(f) { cout <<"outeedw"<< i << endl; string s(i); id = s.c_str(); this->printNode(cout); }
-	~Header() { delete fl; }
+	Header(const char* i, vector<Formal>* f): id(i), fl(f) {}
+	~Header() { delete id; delete fl; }
 	virtual void printNode(ostream &out) const override {
-		out << "Header("; //<< id << ", ";
-		out << id;
-		if(type != nullptr) out << *type << ", ";
-		bool first = true;
-		for(Formal f: *fl) {
-			if(!first) out << ", ";
-			first = false;
-			out << f;
+		out << "Header(" << id;
+		if(type != nullptr) out << ", " << *type;
+		if(fl != nullptr) {
+			for(Formal f: *fl) {
+				out << ", ";
+				out << f;
+			}
 		}
 		out << ")";
 	}

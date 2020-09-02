@@ -1,7 +1,9 @@
 %{
 
 #include "ast.hpp"
-
+#include <signal.h>
+#include <execinfo.h>
+#include <stack>
 extern FILE* yyin;
 
 %}
@@ -38,25 +40,24 @@ extern FILE* yyin;
 %token T_ne		"<>"
 %token T_assign	":="
 
-%token<name> T_id T_string
+%token<cstr> T_id T_string
 %token<integer>	T_constInt
 %token<character> T_constChar
 
-%left<op> "or"
-%left<op> "and"
-%right<op> "not"
-%nonassoc<op> '=' "<>" '<' '>' "<=" ">="
-%right<op> '#'
-%left<op> '+' '-'
-%left<op> '*' '/' "mod"
+%left<cstr> "or"
+%left<cstr> "and"
+%right<cstr> "not"
+%nonassoc<cstr> '=' "<>" '<' '>' "<=" ">="
+%right<cstr> '#'
+%left<cstr> '+' '-'
+%left<cstr> '*' '/' "mod"
 %right PSIGN
 %right MSIGN
 
 %union{
-  const char* name;
+  const char* cstr;
   int integer;
   char character;
-  const char* op;
   bool boolean;
   Def* def;
   vector<shared_ptr<Def>>* defl;
@@ -120,7 +121,7 @@ def_list:
 
 header:
   type T_id	'(' formal_opt ')' { $$ = new Header($2, $4, $1); }
-| T_id '(' formal_opt ')' {cout<<$1<<"outeedw"<<endl<<endl; $$ = new Header($1, $3); }
+| T_id '(' formal_opt ')' { $$ = new Header($1, $3); }
 ;
 
 formal_opt:
@@ -269,8 +270,22 @@ rval:
 
 %%
 
+void handler(int sig) {
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, fileno(stderr));
+  exit(1);
+}
+
 int main(int argc, char** argv) {
   yydebug = 1;
+  signal(SIGSEGV, handler); 
   if(argc != 2) {
     cout << "1 argument expected" << endl;
     exit(1);
