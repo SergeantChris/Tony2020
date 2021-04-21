@@ -1,7 +1,7 @@
 .PHONY: clean distclean default
 
 CXX=c++
-CXXFLAGS=-Wall
+CXXFLAGS=-Wall -std=c++11
 
 default: parser
 

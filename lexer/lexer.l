@@ -37,7 +37,6 @@
 #define T_ne 1032
 #define T_assign 1033
 
-
 int linecount=1;
 int m_comment=0;
 void yyerror (const char msg []);
@@ -81,32 +80,32 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "not"		{ return T_not; }
 "elsif"		{ return T_elsif; }
 
-{L}({L}|{D}|_|\?)* {return T_id;}
-{D}+ { return T_constInt; }
+{L}({L}|{D}|_|\?)*          { return T_id; }
+{D}+                        { return T_constInt; }
 \"([^\n\"\'\\]|{ESCAPE})*\" { return T_string; }
-\'([^\"\'\\]|{ESCAPE})\' { return T_constChar; }
-[+|\-|*|/|#|=|<|>] {return yytext[0];}
+\'([^\"\'\\]|{ESCAPE})\'    { return T_constChar; }
+[+|\-|*|/|#|=|<|>]          {return yytext[0];}
 
-"<="				{ return T_le;	}
-">="				{ return T_ge;}
-"<>"				{ return T_ne;}
+"<="				{ return T_le; }
+">="				{ return T_ge; }
+"<>"				{ return T_ne; }
 
 [\(|\)|\[|\]|,|;|:]	{ return yytext[0]; }
-":="				{ return T_assign; }
-%[^\n]*\n			{ linecount++; }
+":="				        { return T_assign; }
+%[^\n]*\n			      { linecount++; }
 
-"<*"            { BEGIN(M_COMMENT); m_comment++; }
-<M_COMMENT>"*>" { m_comment--; if(m_comment==0) BEGIN(INITIAL); }
+"<*"              { BEGIN(M_COMMENT); m_comment++; }
+<M_COMMENT>"*>"   { m_comment--; if(m_comment==0) BEGIN(INITIAL); }
 <M_COMMENT>"<*"   { m_comment++; }
-<M_COMMENT>\n   { /*nothing*/ }
-<M_COMMENT>.    { /*nothing*/ }
+<M_COMMENT>\n     { /*nothing*/ }
+<M_COMMENT>.      { /*nothing*/ }
 
-{W}+ {/*nothing*/}
+{W}+        {/*nothing*/}
 \n					{ linecount++; }
 
-<<EOF>> { return T_eof; }
+<<EOF>>     { return T_eof; }
 
-. { yyerror("no such token"); }
+. { yyerror("Lexical Error: no such token"); }
 
 %%
 

@@ -1,12 +1,9 @@
 %{
+
 #include <cstdio>
+#include <cstdlib>
 #include "lexer.hpp"
 %}
-
-%union{
-	const char* name;
-	int val;
-}
 
 %token T_eof  "eof"
 %token T_and	"and"
@@ -40,10 +37,10 @@
 %token T_ne		"<>"
 %token T_assign	":="
 
-%token<name> T_id
-%token<val>	T_constInt
-%token<val> T_constChar
-%token<name> T_string
+%token  T_id
+%token	T_constInt
+%token  T_constChar
+%token  T_string
 
 %left "or"
 %left "and"
@@ -52,8 +49,8 @@
 %right '#'
 %left '+' '-'
 %left '*' '/' "mod"
-%right PSIGN
-%right MSIGN
+%right PSIGN // plus sign
+%right MSIGN // minus sign
 
 //%expect 1
 
@@ -96,7 +93,7 @@ formal:
 | type id_list
 ;
 
-id_list: 
+id_list:
   T_id
 | id_list ',' T_id
 ;
@@ -108,20 +105,20 @@ type: "int"
 | "list" '[' type ']'
 ;
 
-func_decl: 
+func_decl:
   "decl" header
 ;
 
-var_def: 
+var_def:
   type id_list
 ;
 
-stmt_plus: 
+stmt_plus:
   stmt stmt_star
 ;
 
 stmt_star:
-  /*nothing*/	
+  /*nothing*/
 | stmt_star stmt
 ;
 
@@ -133,7 +130,7 @@ stmt:
 | for_clause
 ;
 
-if_clause: 
+if_clause:
   "if" expr	':' stmt_plus	elsif_clause else_clause "end"
 ;
 
@@ -152,7 +149,7 @@ for_clause:
 ;
 
 simple:
-  "skip"		 
+  "skip"
 | atom ":=" expr /* atom is l-value && expr.type=atom.type */
 | call
 ;
@@ -167,7 +164,7 @@ call:
 | T_id '(' ')'
 ;
 
-expr_list: 
+expr_list:
   expr
 | expr_list ',' expr
 ;
