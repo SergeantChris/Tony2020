@@ -11,7 +11,7 @@ using namespace std;
 
 //NOTE TO SELF AFTER EXETASTIKH: I HAVE ISSUE WITH COMPOSITE CONSTRUCTORS,
 //BUT I NEED TO FIX STACKTRACE TO SEE WHAT IT IS
-//I THINK I NEED TO ADD A FLAG IN COMPILATION 
+//I THINK I NEED TO ADD A FLAG IN COMPILATION
 
 enum PrimitiveType { TYPE_int, TYPE_bool, TYPE_char };
 
@@ -20,10 +20,10 @@ class CompositeType;
 union Type {
 	PrimitiveType p;
 	CompositeType* c;
-	//~Type() {} 
+	//~Type() {}
 	//i dont think ill ever put a primtype in a comptype variable
 	//if i want to keep the destructor i'll have to make type a pointer
-	//in bison union 
+	//in bison union
 };
 
 class CompositeType { //abstract class
@@ -66,10 +66,10 @@ inline ostream& operator<<(ostream &out, Type t) {
 		case TYPE_char: out << "char"; break;
 		default: break;
 	}
-	
+
 	if((t.c)->getId() == "array") out << "array of" << ((t.c)->getType());
 	else if((t.c)->getId() == "list") out << "list of" << ((t.c)->getType());
-	
+
 	return out;
 }
 
@@ -81,7 +81,7 @@ public:
 };
 
 inline ostream& operator<<(ostream &out, const ASTnode &n) {
-	cout << "GEIA SAAAAS eimai o" << endl;
+	// cout << "GEIA SAAAAS eimai o" << endl;
 	n.printNode(out);
 	return out;
 }
@@ -101,10 +101,12 @@ protected:
 
 class Const: virtual public Expr {
 public:
-	Const(int i) { tc.integer = i; tc_act = TC_int; }
-	Const(char c) { tc.character = c; tc_act = TC_char; }
-	Const(const char* s) { tc.str = s; tc_act = TC_str; }
+	// different CONSTRUCTORS for each case of const
+	Const(int i)		 			{ tc.integer = i; tc_act = TC_int; }
+	Const(char c) 				{ tc.character = c; tc_act = TC_char; }
+	Const(const char* s)  { tc.str = s; tc_act = TC_str; }
 	Const(string v) {
+		// for boolen types
 		if(v == "true") {
 			tc.boolean = true;
 			tc_act = TC_bool;
@@ -114,7 +116,7 @@ public:
 			tc_act = TC_bool;
 		}
 		else if(v == "nil"); //no idea //must check l-val for type?
-	} 
+	}
 	~Const() {}
 	virtual void printNode(ostream &out) const override {
 		out << "Const(";
@@ -225,7 +227,7 @@ public:
 	Assign(Atom* a, Expr* e): atom(a), expr(e) {}
 	~Assign() { delete atom; delete expr; }
 	virtual void printNode(ostream &out) const override {
-		out << "Assign(" << *atom << *expr << ")";
+		out << "Assign(" << *atom << ", " << *expr << ")";
 	}
 private:
 	Atom* atom;
@@ -248,7 +250,7 @@ public:
 	}
 private:
 	const char* id;
-	vector<shared_ptr<Expr>>* exprl; 
+	vector<shared_ptr<Expr>>* exprl;
 };
 
 class RetVal: public Atom {
@@ -277,8 +279,8 @@ private:
 
 class Branch: public Stmt {
 public:
-	Branch(vector<shared_ptr<Stmt>>* ct, 
-		Expr* c = new Const("true"), 
+	Branch(vector<shared_ptr<Stmt>>* ct,
+		Expr* c = new Const("true"),
 		vector<Branch>* eif = nullptr,
 		Branch* e = nullptr): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
 	~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
@@ -309,8 +311,8 @@ private:
 
 class Loop: public Stmt {
 public:
-	Loop(vector<shared_ptr<Simple>>* i, 
-		Expr* c, 
+	Loop(vector<shared_ptr<Simple>>* i,
+		Expr* c,
 		vector<shared_ptr<Simple>>* s,
 		vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct) {}
 	~Loop() { delete inits; delete condition; delete steps; delete cond_true; }
@@ -343,7 +345,7 @@ private:
 class Formal: public ASTnode {
 public:
 	Formal(Type t, vector<const char*>* i, string cb): type(t), idl(i) {
-		if(cb == "cbv") call_by_reference = false; 
+		if(cb == "cbv") call_by_reference = false;
 		else if(cb == "cbr") call_by_reference = true;  //could be enum
 	}
 	~Formal() { delete idl; }
@@ -393,6 +395,27 @@ public:
 	virtual ~Def() {}
 };
 
+// class DefList: public Def {
+// public:
+// 	DefList(): def_list() {}
+// 	~DefList() {
+// 		for (Def *d : def_list) delete d;
+// 	}
+// 	void append_def(Def *d) { def_list.push_back(d); }
+// 	virtual void printNode(std::ostream &out) const override{
+//     out << "DefList(";
+//     bool first = true;
+//     for (Def *d : def_list) {
+//       if (!first) out << ", ";
+//       first = false;
+//       out << *d;
+//     }
+//     out << ")";
+//   }
+// private:
+// 	vector<Def *> def_list;
+// };
+
 class FuncDef: public Def {
 public:
 	FuncDef(Header* h, vector<shared_ptr<Def>>* d, vector<shared_ptr<Stmt>>* s):
@@ -435,7 +458,8 @@ public:
 	VarDef(Type t, vector<const char*>* i): type(t), idl(i) {}
 	~VarDef() { delete idl; }
 	virtual void printNode(ostream &out) const override {
-		out << "VarDef(" << type << ", ";
+		out << "VarDef(";
+		out << type << ", ";
 		bool first = true;
 		for(const char* i: *idl) {
 			if(!first) out << ", ";
