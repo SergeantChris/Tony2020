@@ -1,0 +1,4 @@
+def simple ():
+  decl abs ()
+  l := 5
+end

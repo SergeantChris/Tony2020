@@ -55,17 +55,16 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "not"	  	{ return T_not; }
 "elsif"		{ return T_elsif; }
 
-{L}({L}|{D}|_|\?)*                    { yylval.cstr = strdup(yytext);
-                                        return T_id;}
-{D}+ { yylval.integer = atoi(yytext); {return T_constInt; }
-\"([^\n\"\'\\]|{ESCAPE})*\"           { string s(yytext);
-                                        string inside = s.substr(1, s.size()-1);
-                                        yylval.cstr = inside.c_str();
-                                        return T_string;
-                                      }
-\'([^\"\'\\]|{ESCAPE})\'              { yylval.character = yytext[1];
-                                        return T_constChar;
-                                      }
+{L}({L}|{D}|_|\?)*             { yylval.cstr = strdup(yytext);
+                                 return T_id;}
+{D}+                           { yylval.integer = atoi(yytext);
+                                 return T_constInt; }
+\"([^\n\"\'\\]|{ESCAPE})*\"    { string s(yytext);
+                                 string inside = s.substr(1, s.size()-1);
+                                 yylval.cstr = inside.c_str();
+                                 return T_string; }
+\'([^\"\'\\]|{ESCAPE})\'       { yylval.character = yytext[1];
+                                 return T_constChar; }
 
 [+|\-|*|/|#|=|<|>]   { return yytext[0]; }
 "<="			 	         { return T_le; }
