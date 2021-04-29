@@ -54,47 +54,26 @@ extern FILE* yyin;
 %right MSIGN
 
 %union{
-  // char array for strings, variables' names and operators
   const char* cstr;
-  // for int numbers
   int integer;
-  // for characters
   char character;
-  // where do we use the boolean?
   /* bool boolean; */
-  // objects of function and variable definitions
   Def* def;
-  // vector of pointers to objects of definitions
   vector<shared_ptr<Def>>* defl;
-  // objects of function headers
   Header* h;
-  // objects of function arguments of certain type
   Formal* frml;
-  // vector of formal objects
   vector<Formal>* fl;
-  // vector of ids?
   vector<const char*>* idl;
-  // members of union types
   Type type;
-  // objects of statements
   Stmt* stmt;
-  // vector of pointer to statement objects
   vector<shared_ptr<Stmt>>* stmtl;
-  // if, else, elif objects
   Branch* brn;
-  // vector of elif objects
   vector<Branch>* brnl;
-  // objects of simple (commands)
   Simple* sim;
-  // vector of pointers to simple objects
   vector<shared_ptr<Simple>>* siml;
-  // call objects
   Call* call;
-  // expression objects
   Expr* expr;
-  // vector of pointers to expr objects
   vector<shared_ptr<Expr>>* exprl;
-  // atom objects
   Atom* atom;
 }
 
@@ -134,6 +113,7 @@ func_def:
     printf("in func_def\n");
   }
 ;
+
 //make objects derived class
 def_list:
   /* nothing */       { $$ = new vector<shared_ptr<Def>>;
@@ -178,20 +158,17 @@ type:
 ;
 
 func_decl:
-  "decl" header { new FuncDecl($2);
-                  printf("in func_decl\n");}
+  "decl" header { $$ = new FuncDecl($2); }
 ;
 
 var_def:
-  type id_list { new VarDef($1, $2); }
+  type id_list { $$ = new VarDef($1, $2); }
 ;
 
 stmt_plus:
   stmt           { $$ = new vector<shared_ptr<Stmt>>;
-                   $$->push_back(shared_ptr<Stmt>($1));
-                   printf("add stmt\n"); }
-| stmt_plus stmt { $1->push_back(shared_ptr<Stmt>($2)); $$ = $1;
-                   printf("add to stmt list\n");}
+                   $$->push_back(shared_ptr<Stmt>($1)); }
+| stmt_plus stmt { $1->push_back(shared_ptr<Stmt>($2)); $$ = $1; }
 ;
 
 

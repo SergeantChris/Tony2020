@@ -395,27 +395,6 @@ public:
 	virtual ~Def() {}
 };
 
-// class DefList: public Def {
-// public:
-// 	DefList(): def_list() {}
-// 	~DefList() {
-// 		for (Def *d : def_list) delete d;
-// 	}
-// 	void append_def(Def *d) { def_list.push_back(d); }
-// 	virtual void printNode(std::ostream &out) const override{
-//     out << "DefList(";
-//     bool first = true;
-//     for (Def *d : def_list) {
-//       if (!first) out << ", ";
-//       first = false;
-//       out << *d;
-//     }
-//     out << ")";
-//   }
-// private:
-// 	vector<Def *> def_list;
-// };
-
 class FuncDef: public Def {
 public:
 	FuncDef(Header* h, vector<shared_ptr<Def>>* d, vector<shared_ptr<Stmt>>* s):
