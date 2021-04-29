@@ -57,13 +57,12 @@ public:
 	}
 };
 
-inline ostream& operator<<(ostream &out, Type t) {
-	out << "";
+inline ostream& operator<<(ostream &out, const Type t) {
 
 	switch(t.p) {
-		case TYPE_int: out << "int"; break;
-		case TYPE_bool: out << "bool"; break;
-		case TYPE_char: out << "char"; break;
+		case TYPE_int: out << "int"; return out;
+		case TYPE_bool: out << "bool"; return out;
+		case TYPE_char: out << "char"; return out;
 		default: break;
 	}
 
@@ -351,6 +350,7 @@ public:
 	~Formal() { delete idl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Formal(" << type << ", ";
+		// out << "Formal( " ;
 		if(call_by_reference == true) out << "cbr" << ", ";
 		bool first = true;
 		for(const char* i: *idl) {

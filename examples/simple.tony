@@ -1,4 +1,4 @@
-def simple ():
-  decl abs ()
-  l := 5
+def simple (int a):
+  int i
+  i := 2
 end
