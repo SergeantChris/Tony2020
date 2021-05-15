@@ -66,13 +66,13 @@ using namespace std;
   vector<shared_ptr<Def>>* defl;
   Header* h;
   Formal* frml;
-  vector<Formal>* fl;
+  vector< Formal*>* fl;
   vector<const char*>* idl;
   Type type;
   Stmt* stmt;
   vector<shared_ptr<Stmt>>* stmtl;
   Branch* brn;
-  vector<Branch>* brnl;
+  vector<Branch*>* brnl;
   Simple* sim;
   vector<shared_ptr<Simple>>* siml;
   Call* call;
@@ -137,9 +137,9 @@ formal_opt:
 ;
 
 formal_list:
-  formal                 { $$ = new vector<Formal>;
-                           $$->push_back(*$1); }
-| formal_list ';' formal { cout << (*$1).front() << "  "; $1->push_back(*$3);  cout << (*$1).front() << "  "; $$ = $1; }
+  formal                 { $$ = new vector<Formal*>;
+                           $$->push_back($1);}
+| formal_list ';' formal { $1->push_back($3); $$ = $1; }
 ;
 
 formal:
@@ -195,9 +195,9 @@ if_clause:
 
 elsif_clause:
   /* nothing */
-    { $$ = new vector<Branch>; }
+    { $$ = new vector<Branch*>; }
 | elsif_clause "elsif" expr ':' stmt_plus
-    { $1->push_back(*(new Branch($5, $3))); $$ = $1; }
+    { $1->push_back(new Branch($5, $3)); $$ = $1; }
 ;
 
 else_clause:

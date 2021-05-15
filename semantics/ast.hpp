@@ -280,7 +280,7 @@ class Branch: public Stmt {
 public:
 	Branch(vector<shared_ptr<Stmt>>* ct,
 		Expr* c = new Const("true"),
-		vector<Branch>* eif = nullptr,
+		vector<Branch*>* eif = nullptr,
 		Branch* e = nullptr): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
 	~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
 	virtual void printNode(ostream &out) const override {
@@ -293,9 +293,9 @@ public:
 		}
 		out << ", " << *condition;
 		if(elsif_branches != nullptr) {
-			for(Branch b: *elsif_branches) {
+			for(Branch *b: *elsif_branches) {
 				out << ", ";
-				out << b;
+				out << *b;
 			}
 		}
 		if(else_branch != nullptr) out << ", " << *else_branch;
@@ -304,7 +304,7 @@ public:
 private:
 	vector<shared_ptr<Stmt>>* cond_true;
 	Expr* condition;
-	vector<Branch>* elsif_branches;
+	vector<Branch*>* elsif_branches;
 	Branch* else_branch;
 };
 
@@ -323,7 +323,7 @@ public:
 			first = false;
 			out << *s;
 		}
-		out << ", " << condition;
+		out << ", " << *condition;
 		for(shared_ptr<Simple> s: *steps) {
 			out << ", ";
 			out << *s;
@@ -367,27 +367,26 @@ private:
 
 class Header: public ASTnode {
 public:
-	Header(const char* i, vector<Formal>* f, Type t): id(i), fl(f) {
+	Header(const char* i, vector< Formal*>* f, Type t): id(i), fl(f) {
 		type = t;
 	}
-	Header(const char* i, vector<Formal>* f): id(i), fl(f) {}
+	Header(const char* i, vector< Formal*>* f): id(i), fl(f) {}
 	~Header() { delete id; delete fl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Header(" << id;
 		if(type.p != TYPE_null) out << ", " << type;
 		if(fl != nullptr) {
 
-			for(Formal f: *fl) {
+			for(Formal *f: *fl) {
 				out << ", ";
-				out << f;
-				out << " aaaa ";
+				out << *f;
 			}
 		}
 		out << ")";
 	}
 private:
 	const char* id;
-	vector<Formal>* fl;
+	vector< Formal*>* fl;
 	Type type;
 };
 
