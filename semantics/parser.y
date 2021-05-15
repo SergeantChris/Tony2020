@@ -218,7 +218,7 @@ simple_list:
 ;
 
 simple:
-  "skip"         { $$ = nullptr; }
+  "skip"         { $$ = nullptr;}
 | atom ":=" expr { $$ = new Assign($1, $3); }
 /*semcheck: atom is l-value && expr.type=atom.type*/
 | call           { $$ = $1; }
@@ -251,26 +251,26 @@ rval:
 	T_constInt                 { $$ = new Const($1); }
 | T_constChar                { $$ = new Const($1); }
 | '(' expr ')'               { $$ = $2; }
-| '+' expr %prec PSIGN       { $$ = new UnOp($1, $2); }
-| '-' expr %prec MSIGN       { $$ = new UnOp($1, $2); }
-| expr '+' expr              { $$ = new BinOp($1, $2, $3); }
-| expr '-' expr              { $$ = new BinOp($1, $2, $3); }
-| expr '*' expr              { $$ = new BinOp($1, $2, $3); }
-| expr '/' expr              { $$ = new BinOp($1, $2, $3); }
-| expr "mod" expr            { $$ = new BinOp($1, $2, $3); }
-| expr '=' expr              { $$ = new BinOp($1, $2, $3); }
-| expr "<>" expr             { $$ = new BinOp($1, $2, $3); }
-| expr '<' expr              { $$ = new BinOp($1, $2, $3); }
-| expr '>' expr              { $$ = new BinOp($1, $2, $3); }
-| expr "<=" expr             { $$ = new BinOp($1, $2, $3); }
-| expr ">=" expr             { $$ = new BinOp($1, $2, $3); }
-| "not" expr                 { $$ = new UnOp($1, $2); }
-| expr "and" expr            { $$ = new BinOp($1, $2, $3); }
-| expr "or"	expr             { $$ = new BinOp($1, $2, $3); }
+| '+' expr %prec PSIGN       { $$ = new UnOp("+", $2); }
+| '-' expr %prec MSIGN       { $$ = new UnOp("-", $2); }
+| expr '+' expr              { $$ = new BinOp($1, "+", $3);}
+| expr '-' expr              { $$ = new BinOp($1, "-", $3); }
+| expr '*' expr              { $$ = new BinOp($1, "*", $3); }
+| expr '/' expr              { $$ = new BinOp($1, "/", $3); }
+| expr "mod" expr            { $$ = new BinOp($1, "mod", $3); }
+| expr '=' expr              { $$ = new BinOp($1, "=", $3); }
+| expr "<>" expr             { $$ = new BinOp($1, "<>", $3); }
+| expr '<' expr              { $$ = new BinOp($1, "<", $3); }
+| expr '>' expr              { $$ = new BinOp($1, ">", $3); }
+| expr "<=" expr             { $$ = new BinOp($1, "<=", $3); }
+| expr ">=" expr             { $$ = new BinOp($1, ">=", $3); }
+| "not" expr                 { $$ = new UnOp("not", $2); }
+| expr "and" expr            { $$ = new BinOp($1, "and", $3); }
+| expr "or"	expr             { $$ = new BinOp($1, "or", $3); }
 | "true"                     { $$ = new Const("true"); }
 | "false"                    { $$ = new Const("false"); }
 | "new" type '[' expr ']'    { $$ = new MemAlloc($2, $4); }
-| expr '#' expr              { $$ = new BinOp($1, $2, $3); }
+| expr '#' expr              { $$ = new BinOp($1, "#", $3); }
 | "nil"                      { $$ = new Const("nil"); }
 | "nil?" '(' expr ')'        { $$ = new UnOp("nil?", $3); }
 | "head" '(' expr ')'        { $$ = new UnOp("head", $3); }
@@ -294,6 +294,7 @@ void handler(int sig) {
 }
 
 int main(int argc, char** argv) {
+
   /* yydebug = 1; */
   signal(SIGSEGV, handler);
   if(argc != 2) {
