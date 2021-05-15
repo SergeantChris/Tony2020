@@ -66,8 +66,8 @@ inline ostream& operator<<(ostream &out, const Type t) {
 		default: break;
 	}
 
-	if((t.c)->getId() == "array") out << "array of" << ((t.c)->getType());
-	else if((t.c)->getId() == "list") out << "list of" << ((t.c)->getType());
+	if((t.c)->getId() == "array") out << "array of " << ((t.c)->getType());
+	else if((t.c)->getId() == "list") out << "list of " << ((t.c)->getType());
 
 	return out;
 }

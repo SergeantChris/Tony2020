@@ -156,8 +156,8 @@ type:
   "int"               { $$.p = TYPE_int; }
 | "bool"              { $$.p = TYPE_bool; }
 | "char"              { $$.p = TYPE_char; }
-| type '[' ']'        { new ($$.c) Array($1); }
-| "list" '[' type ']' { new ($$.c) List($3); }
+| type '[' ']'        { $$.c = new Array($1); }
+| "list" '[' type ']' { $$.c = new List($3); }
 ;
 
 func_decl:
