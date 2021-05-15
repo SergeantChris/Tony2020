@@ -13,7 +13,7 @@ using namespace std;
 //BUT I NEED TO FIX STACKTRACE TO SEE WHAT IT IS
 //I THINK I NEED TO ADD A FLAG IN COMPILATION
 
-enum PrimitiveType { TYPE_int, TYPE_bool, TYPE_char };
+enum PrimitiveType { TYPE_int, TYPE_bool, TYPE_char, TYPE_null};
 
 class CompositeType;
 
@@ -291,7 +291,7 @@ public:
 			first = false;
 			out << *s;
 		}
-		out << ", " << condition;
+		out << ", " << *condition;
 		if(elsif_branches != nullptr) {
 			for(Branch b: *elsif_branches) {
 				out << ", ";
@@ -350,7 +350,6 @@ public:
 	~Formal() { delete idl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Formal(" << type << ", ";
-		// out << "Formal( " ;
 		if(call_by_reference == true) out << "cbr" << ", ";
 		bool first = true;
 		for(const char* i: *idl) {
@@ -369,17 +368,19 @@ private:
 class Header: public ASTnode {
 public:
 	Header(const char* i, vector<Formal>* f, Type t): id(i), fl(f) {
-		*type = t;
+		type = t;
 	}
 	Header(const char* i, vector<Formal>* f): id(i), fl(f) {}
 	~Header() { delete id; delete fl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Header(" << id;
-		if(type != nullptr) out << ", " << *type;
+		if(type.p != TYPE_null) out << ", " << type;
 		if(fl != nullptr) {
+
 			for(Formal f: *fl) {
 				out << ", ";
 				out << f;
+				out << " aaaa ";
 			}
 		}
 		out << ")";
@@ -387,7 +388,7 @@ public:
 private:
 	const char* id;
 	vector<Formal>* fl;
-	Type* type = nullptr;
+	Type type;
 };
 
 class Def: public ASTnode { //abstract class
@@ -408,6 +409,7 @@ public:
 			first = false;
 			out << *d;
 		}
+		// out << "aaaa" ;
 		for(shared_ptr<Stmt> s: *stmtl) {
 			if(!first) out << ", ";
 			first = false;

@@ -5,6 +5,10 @@
 #include <stack>
 extern FILE* yyin;
 
+#include <iostream>
+using namespace std;
+#include <vector>
+
 %}
 
 %token T_eof  "eof"
@@ -110,23 +114,21 @@ program:
 func_def:
   "def" header ':' def_list stmt_plus "end" {
     $$ = new FuncDef($2, $4, $5);
-    printf("in func_def\n");
   }
 ;
 
 //make objects derived class
 def_list:
-  /* nothing */       { $$ = new vector<shared_ptr<Def>>;
-                        printf("new def_list\n");}
+  /* nothing */       { $$ = new vector<shared_ptr<Def>>; }
 | def_list func_def   { $1->push_back(shared_ptr<Def>($2)); $$ = $1; }
-| def_list func_decl  { $1->push_back(shared_ptr<Def>($2)); $$ = $1;
-                        printf("add func_decl\n");}
+| def_list func_decl  { $1->push_back(shared_ptr<Def>($2)); $$ = $1; }
 | def_list var_def    { $1->push_back(shared_ptr<Def>($2)); $$ = $1; }
 ;
 
 header:
   type T_id	'(' formal_opt ')' { $$ = new Header($2, $4, $1); }
-| T_id '(' formal_opt ')'      { $$ = new Header($1, $3); }
+| T_id '(' formal_opt ')'      { Type t; t.p = TYPE_null;
+                                 $$ = new Header($1, $3, t); }
 ;
 
 formal_opt:
@@ -135,8 +137,9 @@ formal_opt:
 ;
 
 formal_list:
-  formal                 { $$ = new vector<Formal>; $$->push_back(*$1); }
-| formal_list ';' formal { $1->push_back(*$3); $$ = $1; }
+  formal                 { $$ = new vector<Formal>;
+                           $$->push_back(*$1); }
+| formal_list ';' formal { cout << (*$1).front() << "  "; $1->push_back(*$3);  cout << (*$1).front() << "  "; $$ = $1; }
 ;
 
 formal:
