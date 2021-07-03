@@ -1,0 +1,7 @@
+def main ():
+  int seed, i
+  list[list[int]] l
+
+  l := nil
+
+end
