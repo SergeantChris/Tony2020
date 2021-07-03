@@ -17,8 +17,8 @@ parser.hpp parser.cpp: parser.y
 
 parser.o: parser.cpp lexer.hpp ast.hpp symbol.hpp
 
-tot: lexer.o parser.o error.o
-	$(CXX) $(CXXFLAGS) -o tot $^
+tony: lexer.o parser.o error.o
+	$(CXX) $(CXXFLAGS) -o tony $^
 
 clean:
 	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o

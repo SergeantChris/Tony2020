@@ -64,7 +64,8 @@ public:
   int getSize() const { return size; }
   int getOffset() const { return offset; }
 private:
-  map<const char*, SymbolEntry> locals;
+	map<const char*, SymbolEntry> locals;
+  map<const char*, SymbolEntry> funcs;
   int offset;
   int size;
 };

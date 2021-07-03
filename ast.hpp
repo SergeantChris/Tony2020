@@ -287,6 +287,9 @@ public:
 		cout << "INSIDE SEM for PreOp" << endl;
 		expr->sem();
 			if(op == "+" || op == "-") {
+				// Type t;
+				// t.p = TYPE_int;
+				// expr->typeCheck(t);
 				expr->primTypeCheck(TYPE_int);
 				type.p = TYPE_int;
 			}
@@ -485,7 +488,6 @@ public:
 	virtual void sem() {
 		cout << "INSIDE SEM for Assign" << endl;
 		expr->sem();
-		// TODO: if the expr is MemoryAlloc we have to pass the array_size to atom
 		atom->sem();
 		expr->typeCheck(atom->getType());
 		// if(expr->isMemoryAlloc()) {
@@ -755,7 +757,7 @@ public:
 	}
 	virtual void sem() {
 		cout << "INSIDE SEM for FuncDecl" << endl;
-
+		hd->sem();
 		// TODO: we need to check for duplicate declarations
 		// and also if the same header has been defined berfore with FuncDef
 		// and somehow check for the scopes
