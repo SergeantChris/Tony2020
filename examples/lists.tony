@@ -3,7 +3,7 @@ def main ():
  bool b
  bool c
  int[] pin, pan
-  def list[int] qsort (list[int] l):
+  def list[int] qsort (list[int] l, k; int a):
 		char c
 		int seed, i
     list[int] l
