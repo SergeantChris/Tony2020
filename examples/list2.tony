@@ -1,11 +1,18 @@
 def main ():
   char seed
+  decl list[int] qsort (list[char] l, k; int a)
   %char[] marilena
-  %int seed, i
-  %list[int] l
-  
+  int i
+  list[int] l
+
+  def list[int] qsort (list[char] l, k; int a):
+    int seed
+		char c
+    c := 'a'
+  end
+
   seed := 'a'
   %"cute"[0] := 'x'
-  %l := nil
+  l := nil
 
 end

@@ -131,9 +131,6 @@ class Expr: public ASTnode { //abstract class
 public:
 	virtual ~Expr() {}
 	// TODO: there is a problem here...it never reaches the override function inside const when the caller is not const i.e. Op
-	// virtual int getIntVal() {return -990;}
-	// virtual bool isMemoryAlloc() {return false;}
-	// virtual int getExprIntVal() {return -999;}
 	void primTypeCheck(PrimitiveType t) {
 		#if PRE_DEBUG
 		cout << "-- TYPE CHECK  (" << t << ")";
@@ -155,8 +152,8 @@ public:
 		#endif
 		if(!(type == t)){
 			cout << endl;
-			error("");
 			cout << "Type mismatch, expected type: " << t << ", but type: " << type << " was used" << endl;
+			error("");
 		}
 		#if PRE_DEBUG
 		else {
@@ -254,7 +251,7 @@ public:
 	// 	return -999;
 	// }
 	virtual void sem() override {
-			cout << "INSIDE SEM for Const" << endl;
+			// cout << "INSIDE SEM for Const" << endl;
 			switch(tc_act) {
 				case(TC_int): type.p = TYPE_int; break;
 				case(TC_char): type.p = TYPE_char; break;
@@ -284,7 +281,7 @@ public:
 		out << "PreOp(" << op << ", " << *expr << ")";
 	}
 	virtual void sem() override {
-		cout << "INSIDE SEM for PreOp" << endl;
+		// cout << "INSIDE SEM for PreOp" << endl;
 		expr->sem();
 			if(op == "+" || op == "-") {
 				// TODO: example of alteranative use
@@ -320,7 +317,7 @@ public:
 		out << "Op(" << *expr1 << ", " << op << ", " << *expr2 << ")";
 	}
 	virtual void sem() override {
-		cout << "INSIDE SEM for Op" << endl;
+		// cout << "INSIDE SEM for Op" << endl;
 		expr1->sem();
 		expr2->sem();
 		if(op == "and" || op == "or") {
@@ -358,7 +355,7 @@ public:
 		out << "MemoryAlloc(" << type << ", " << *expr << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for MemoryAlloc" << endl;
+		// cout << "INSIDE SEM for MemoryAlloc" << endl;
 		expr->sem();
 		expr->primTypeCheck(TYPE_int);
 
@@ -399,7 +396,7 @@ public:
 	// }
 	virtual void sem() override {
 		// papaspyrou:
-		cout << "INSIDE SEM for Id" << endl;
+		// cout << "INSIDE SEM for Id" << endl;
 		cout << "Searching for: " << id << " ... ";
 		SymbolEntry *e = st.lookup(string(id));
 		if(e != nullptr) {
@@ -430,7 +427,7 @@ public:
 		out << "DirectAcc(" << *atom << ", " << *expr << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for DirectAcc" << endl;
+		// cout << "INSIDE SEM for DirectAcc" << endl;
 		expr->sem();
 		atom->sem();
 		atom->firstLayerCompositeTypeCheck("array");
@@ -476,7 +473,7 @@ public:
 		// expr->type_check(lhs->type)
 		// αυτο που κανει ο παπασπυρου εμεις το κανουμε μεσα στο ID,
 		// δηλαδη ελεγχουμε αν υπαρχει (και το scope) της μεταβλητης μεσα στο semτης ID
-		cout << "INSIDE SEM for Assign" << endl;
+		// cout << "INSIDE SEM for Assign" << endl;
 
 		expr->sem();
 		atom->sem();
@@ -505,7 +502,7 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for Call" << endl;
+		// cout << "INSIDE SEM for Call" << endl;
 		// we have to check if the function's arguments are the same type as the exprList (one by one)
 		// so we have to look for the ids in the st
 		// and also for the funcion itself (return type...)... not sure if true??
@@ -534,7 +531,7 @@ public:
 		out << "ReturnValue(" << *call << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for Return Value" << endl;
+		// cout << "INSIDE SEM for Return Value" << endl;
 		// TODO: initially we need to check if the function has return type
 		call->sem();
 
@@ -553,7 +550,7 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for Return" << endl;
+		// cout << "INSIDE SEM for Return" << endl;
 		// we have to typecheck to see if the return type is the same as the type of the function
 		if(ret_val != nullptr) {
 			ret_val->sem();
@@ -589,7 +586,7 @@ public:
 		out << ")";
 	}
 	virtual void sem() override {
-		cout << "INSIDE SEM for Branch" << endl;
+		// cout << "INSIDE SEM for Branch" << endl;
 		condition->sem();
 		condition->primTypeCheck(TYPE_bool);
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
@@ -633,7 +630,7 @@ public:
 	}
 
 	virtual void sem() override {
-		cout << "INSIDE SEM for Loop" << endl;
+		// cout << "INSIDE SEM for Loop" << endl;
 		condition->sem();
 		condition->primTypeCheck(TYPE_bool);
 		for(shared_ptr<Simple> s: *inits) 	s->sem();
@@ -667,7 +664,7 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for Formal" << endl;
+		// cout << "INSIDE SEM for Formal" << endl;
 		for(const char* i: *idl) {
 			// save each var into the SymbolTable in the scope of the function
 			st.insert(string(i), type);
@@ -699,22 +696,29 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for Header" << endl;
+		// cout << "INSIDE SEM for Header" << endl;
 
 		// TODO: somewhere we need to check the header type and return type consistency
 		// type can be TYPE_null
 		// check if there has been a declaration of the function
-		// SymbolEntry *e = st.lookup(id);
-		// if (e == nullptr) {
-		// 	st.insert(id, type);
-		// }
-		// else {
-		// 	// compare type and e->type and maybe all the parameters
-		// }
+		if (string(id) != "main"){
+			SymbolEntry *e = st.lookup(id, "func_def");
+			if (e == nullptr) {
+				st.insert(string(id), type, "func_def");
+			}
+			else {
+				string def = e->from;
+				// two cases:
+				// the funcion is previously defined or declared
+				// error is has been defined again
+				// else compare type and e->type and maybe all the parameters
+			}
+		}
+
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
 
-		st.insert(string(id), type);
+		// st.insert(string(id), type);
 
 		if(fl != nullptr) {
 			for(Formal *f: *fl) {
@@ -757,9 +761,7 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		// TODO: we need to do something with the Header
-		// and we also need to open/close scopes
-		cout << "INSIDE SEM for FuncDef" << endl;
+		// cout << "INSIDE SEM for FuncDef" << endl;
 		hd->sem();
 		for(shared_ptr<Def> d: *defl) d->sem();
 		for(shared_ptr<Stmt> s: *stmtl) s->sem();
@@ -782,8 +784,10 @@ public:
 		out << "FuncDecl(" << *hd << ")";
 	}
 	virtual void sem() {
-		cout << "INSIDE SEM for FuncDecl" << endl;
+		// cout << "INSIDE SEM for FuncDecl" << endl;
 		hd->sem();
+		cout << "--- Closing scope!" << endl;
+		st.closeScope();
 		// TODO: we need to check for duplicate declarations
 		// and also if the same header has been defined berfore with FuncDef
 		// and somehow check for the scopes
@@ -809,7 +813,7 @@ public:
 	}
 	virtual void sem() {
 		#if PRE_DEBUG
-		cout << "INSIDE SEM for VarDef" << endl;
+		// cout << "INSIDE SEM for VarDef" << endl;
 		#endif
 		for(const char* i: *idl){
 			st.insert(string(i), type);

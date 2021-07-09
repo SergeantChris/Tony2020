@@ -24,9 +24,12 @@ union Type {
 struct SymbolEntry {
   Type type;
   int offset;
+	string from; // "var" or "func_def" of "func_decl"
+	vector<Type> params; // vector with the types or the parameters - in func_decl
   SymbolEntry() {}
-  SymbolEntry(Type t, int ofs) : type(t), offset(ofs) {}
+  SymbolEntry(Type t, int ofs, string fr = "var", vector<Type> v = vector<Type>()) : type(t), offset(ofs), from(fr), params(v) {}
 };
+
 inline ostream& operator<<(ostream &out, const Type t);
 
 inline ostream& operator<<(ostream &out, const SymbolEntry e) {
@@ -38,22 +41,42 @@ class Scope {
 public:
   Scope(int ofs = -1) : locals(), offset(ofs), size(0) {}
 
-  SymbolEntry * lookup(string c) {
-    if (locals.find(c) == locals.end()) {
-			cout << "Did not found it " << endl;
-			return nullptr;
+  SymbolEntry * lookup(string c, string def) {
+		if (def == "var"){
+			if (locals.find(c) == locals.end()) {
+				cout << "Did not found it " << endl;
+				return nullptr;
+			}
+	    return &locals[c];
 		}
-    return &locals[c];
+		else {
+			if (funcs.find(c) == funcs.end()) {
+				cout << "Did not found it " << endl;
+				return nullptr;
+			}
+	    return &funcs[c];
+		}
   }
 
-  void insert(string c, Type t) {
-    if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
-		cout << "Inserting Var: " << c << " into locals" << endl;
-		locals[c] = SymbolEntry(t, offset++);
-		cout << locals.find(c)->second;
-		cout << " id: " << c << endl;
-    ++size;
-		cout << " Size: " << size << endl;
+  void insert(string c, Type t, string def) {
+		if (def == "var"){
+			if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
+			cout << "Inserting Var: " << c << " into locals" << endl;
+			locals[c] = SymbolEntry(t, offset++);
+			// cout << locals.find(c)->second;
+			// cout << " id: " << c << endl;
+	    ++size;
+			// cout << " Size: " << size << endl;
+		}
+		else {
+			if (funcs.find(c) != funcs.end()) error("Duplicate function name: %s", c);
+			cout << "Inserting Fun: " << c << " into funcs" << endl;
+			funcs[c] = SymbolEntry(t, offset++, def);
+			// cout << locals.find(c)->second;
+			// cout << " id: " << c << endl;
+			++size;
+			// cout << " Size: " << size << endl;
+		}
   }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
@@ -65,7 +88,6 @@ private:
 };
 
 class SymbolTable {
-	//papaspyrou
 public:
   void openScope() {
     int ofs = scopes.empty() ? 0 : scopes.back().getOffset();
@@ -74,20 +96,17 @@ public:
   void closeScope() {
     scopes.pop_back();
   }
-  SymbolEntry * lookup(string c) {
-		// papaspyrou
+  SymbolEntry * lookup(string c, string def = "var") {
     for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
 			cout << "scope with size: " << i->getSize() << " and offset: " << i->getOffset() << endl;
-			SymbolEntry *e = i->lookup(c);
+			SymbolEntry *e = i->lookup(c, def);
       if (e != nullptr) return e;
     }
     error("Variable %s not found", c);
     return nullptr;
   }
-  void insert(string c, Type t) {
-    scopes.back().insert(c, t);
-		// SymbolEntry *e = scopes[0].lookup(c);
-		// cout << *e << endl;
+  void insert(string c, Type t, string def = "var") {
+    scopes.back().insert(c, t, def);
   }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();
