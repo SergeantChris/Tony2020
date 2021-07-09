@@ -1,0 +1,11 @@
+def main ():
+  char seed
+  %char[] marilena
+  %int seed, i
+  %list[int] l
+  
+  seed := 'a'
+  %"cute"[0] := 'x'
+  %l := nil
+
+end

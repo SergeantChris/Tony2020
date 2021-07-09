@@ -356,23 +356,11 @@ public:
 	virtual void printNode(ostream &out) const override {
 		out << "MemoryAlloc(" << type << ", " << *expr << ")";
 	}
-	// virtual bool isMemoryAlloc() override {
-	// 	return true;
-	// }
-	// virtual int getExprIntVal() override {
-	// 	expr->primTypeCheck(TYPE_int);
-	// 	return expr->getIntVal();
-	// }
 	virtual void sem() {
 		cout << "INSIDE SEM for MemoryAlloc" << endl;
 		expr->sem();
 		expr->primTypeCheck(TYPE_int);
-		// cout << "-- VAL CHECK  (" << expr->getIntVal() << ")";
-		// if(expr->getIntVal() < 0) {
-		// 	cout << endl;
-		// 	error("Trying to create new array with size: %d", expr->getIntVal());
-		// }
-		// cout << "  ---> ok" << endl;
+
 		Type final_type;
 		final_type.c = new Array(new_type);
 		type = final_type;
@@ -409,9 +397,10 @@ public:
 	// 	}
 	// }
 	virtual void sem() override {
+		// papaspyrou:
 		cout << "INSIDE SEM for Id" << endl;
 		cout << "Searching for: " << id << " ... ";
-		SymbolEntry *e = st.lookup(id);
+		SymbolEntry *e = st.lookup(string(id));
 		if(e != nullptr) {
 			cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
 			type = e->type;
@@ -421,11 +410,6 @@ public:
 			t.p = TYPE_null;
 			type = t;
 		}
-		// Type t = my_st.lookup(id);
-		// if(t.p != TYPE_null) {
-		// 		cout << "Found it with type: " << t << endl;
-		// }
-		// 	type = t;
 	}
 private:
 	const char* id;
@@ -486,7 +470,11 @@ public:
 		out << "Assign(" << *atom << ", " << *expr << ")";
 	}
 	virtual void sem() {
+		// papaspyrou:
+		// SymbolEntry *lhs = st.lookup(atom)
+		// expr->type_check(lhs->type)
 		cout << "INSIDE SEM for Assign" << endl;
+
 		expr->sem();
 		atom->sem();
 		expr->typeCheck(atom->getType());
@@ -518,6 +506,17 @@ public:
 		// we have to check if the function's arguments are the same type as the exprList (one by one)
 		// so we have to look for the ids in the st
 		// and also for the funcion itself (return type...)... not sure if true??
+
+		// check if the function is defined
+		SymbolEntry *name = st.lookup(string(id));
+		// there should be a vector of all the types of the parameters in the symbol table
+		int i = 0;
+		for(shared_ptr<Expr> e: *exprList) {
+			e->sem();
+			// e->typeCheck(name->parameters[i]);
+			i++;
+		}
+
 	}
 private:
 	const char* id;
@@ -535,6 +534,7 @@ public:
 		cout << "INSIDE SEM for Return Value" << endl;
 		// TODO: initially we need to check if the function has return type
 		call->sem();
+
 	}
 private:
 	Call* call;
@@ -551,7 +551,7 @@ public:
 	}
 	virtual void sem() {
 		cout << "INSIDE SEM for Return" << endl;
-		// dont know what to do yet
+		// we have to typecheck to see if the return type is the same as the type of the function
 		if(ret_val != nullptr) {
 			ret_val->sem();
 		}
@@ -628,6 +628,7 @@ public:
 		}
 		out << ")";
 	}
+
 	virtual void sem() override {
 		cout << "INSIDE SEM for Loop" << endl;
 		condition->sem();
@@ -636,6 +637,7 @@ public:
 		for(shared_ptr<Simple> s: *steps) 	s->sem();
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
 	}
+
 private:
 	vector<shared_ptr<Simple>>* inits;
 	Expr* condition;
@@ -663,6 +665,10 @@ public:
 	}
 	virtual void sem() {
 		cout << "INSIDE SEM for Formal" << endl;
+		for(const char* i: *idl) {
+			// save each var into the SymbolTable in the scope of the function
+			st.insert(string(i), type);
+		}
 	}
 private:
 	Type type;
@@ -693,8 +699,26 @@ public:
 		cout << "INSIDE SEM for Header" << endl;
 
 		// TODO: somewhere we need to check the header type and return type consistency
-		if(type.p != TYPE_null) {
+		// type can be TYPE_null
+		// check if there has been a declaration of the function
+		// SymbolEntry *e = st.lookup(id);
+		// if (e == nullptr) {
+		// 	st.insert(id, type);
+		// }
+		// else {
+		// 	// compare type and e->type and maybe all the parameters
+		// }
+		st.openScope();
+		cout << "+++ Opening new scope!" << endl;
 
+		st.insert(string(id), type);
+
+		if(fl != nullptr) {
+			for(Formal *f: *fl) {
+				// insert these vars in the scope of this function in the SymbolTable
+				// we should make a vector with all types of the parameters to check on calls
+ 				f->sem();
+			}
 		}
 	}
 private:
@@ -733,8 +757,6 @@ public:
 		// and we also need to open/close scopes
 		cout << "INSIDE SEM for FuncDef" << endl;
 		hd->sem();
-		st.openScope();
-		cout << "+++ Opening new scope!" << endl;
 		for(shared_ptr<Def> d: *defl) d->sem();
 		for(shared_ptr<Stmt> s: *stmtl) s->sem();
 		size = st.getSizeOfCurrentScope();
@@ -785,7 +807,11 @@ public:
 		#if PRE_DEBUG
 		cout << "INSIDE SEM for VarDef" << endl;
 		#endif
-		for(const char* i: *idl) st.insert(i, type);
+		for(const char* i: *idl){
+			st.insert(string(i), type);
+			// st.insert("a", type);
+			// cout << *st.lookup("a");
+		}
 	}
 private:
 	Type type;
