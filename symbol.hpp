@@ -37,8 +37,10 @@ struct MySymbolEntry {
   MySymbolEntry(const char* i, Type t, int sz = 0) : id(i), type(t), size(sz) {}
 };
 
+inline ostream& operator<<(ostream &out, const Type t);
+
 inline ostream& operator<<(ostream &out, const SymbolEntry e) {
-	out << "-/-/ SymbolEntry /-/- " << endl << " offset: " << e.offset << endl << " type: " << /*e.type <<*/ endl;
+	out << "-/-/ SymbolEntry /-/- " << endl << " offset: " << e.offset << endl << " type: " << e.type << endl;
 	return out;
 }
 
@@ -53,13 +55,15 @@ public:
     return &locals[c];
   }
   void insert(const char* c, Type t) {
-    if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
+    if (locals.find(c) != locals.end()) {
+			error("Duplicate variable: %s", c);
+			return;
+		}
 		cout << "Inserting Var: " << c << " into locals" << endl;
 		locals[c] = SymbolEntry(t, offset++);
-		cout << locals[c];
-		cout << " id: " << c << endl;
     ++size;
-		cout << "Size: " << size << endl;
+		cout << locals[c];
+		cout << " Size of scope: " << size << endl;
   }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
