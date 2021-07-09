@@ -287,6 +287,7 @@ public:
 		cout << "INSIDE SEM for PreOp" << endl;
 		expr->sem();
 			if(op == "+" || op == "-") {
+				// TODO: example of alteranative use
 				// Type t;
 				// t.p = TYPE_int;
 				// expr->typeCheck(t);
@@ -473,6 +474,8 @@ public:
 		// papaspyrou:
 		// SymbolEntry *lhs = st.lookup(atom)
 		// expr->type_check(lhs->type)
+		// αυτο που κανει ο παπασπυρου εμεις το κανουμε μεσα στο ID,
+		// δηλαδη ελεγχουμε αν υπαρχει (και το scope) της μεταβλητης μεσα στο semτης ID
 		cout << "INSIDE SEM for Assign" << endl;
 
 		expr->sem();
@@ -720,6 +723,7 @@ public:
  				f->sem();
 			}
 		}
+		// TODO: here we should probably close the scope
 	}
 private:
 	const char* id;

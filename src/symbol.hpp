@@ -27,9 +27,10 @@ struct SymbolEntry {
   SymbolEntry() {}
   SymbolEntry(Type t, int ofs) : type(t), offset(ofs) {}
 };
+inline ostream& operator<<(ostream &out, const Type t);
 
 inline ostream& operator<<(ostream &out, const SymbolEntry e) {
-	out << "-/-/ SymbolEntry /-/- " << endl << " offset: " << e.offset << endl << " type: " <<  e.type.p << endl;
+	out << "-/-/ SymbolEntry /-/- " << endl << " offset: " << e.offset << endl << " type: " <<  e.type << endl;
 	return out;
 }
 
@@ -42,7 +43,6 @@ public:
 			cout << "Did not found it " << endl;
 			return nullptr;
 		}
-
     return &locals[c];
   }
 
