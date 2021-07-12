@@ -58,7 +58,7 @@ public:
 		}
   }
 
-  void insert(string c, Type t, string def) {
+  void insert(string c, Type t, string def, vector<Type> v) {
 		if (def == "var"){
 			if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
 			cout << "Inserting Var: " << c << " into locals" << endl;
@@ -71,7 +71,7 @@ public:
 		else {
 			if (funcs.find(c) != funcs.end()) error("Duplicate function name: %s", c);
 			cout << "Inserting Fun: " << c << " into funcs" << endl;
-			funcs[c] = SymbolEntry(t, offset++, def);
+			funcs[c] = SymbolEntry(t, offset++, def, v);
 			// cout << locals.find(c)->second;
 			// cout << " id: " << c << endl;
 			++size;
@@ -105,8 +105,8 @@ public:
     error("Variable %s not found", c);
     return nullptr;
   }
-  void insert(string c, Type t, string def = "var") {
-    scopes.back().insert(c, t, def);
+  void insert(string c, Type t, string def = "var", vector<Type> v = vector<Type>()) {
+    scopes.back().insert(c, t, def, v);
   }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();

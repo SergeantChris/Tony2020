@@ -670,6 +670,9 @@ public:
 			st.insert(string(i), type);
 		}
 	}
+	pair<Type, int> getType() {
+		return make_pair(type, idl->size());
+	}
 private:
 	Type type;
 	vector<const char*>* idl;
@@ -695,39 +698,42 @@ public:
 		}
 		out << ")";
 	}
-	virtual void sem() {
+	virtual void sem(bool func = true) {
 		// cout << "INSIDE SEM for Header" << endl;
 
 		// TODO: somewhere we need to check the header type and return type consistency
 		// type can be TYPE_null
 		// check if there has been a declaration of the function
 		if (string(id) != "main"){
+			cout << "Looking up for declaration of the function... ";
 			SymbolEntry *e = st.lookup(id, "func_def");
+			vector<Type> params;
+			for(Formal *f: *fl) {
+				pair<Type, int> pair_type = f->getType();
+				params.insert(params.end(), pair_type.second, pair_type.first);
+			}
 			if (e == nullptr) {
-				st.insert(string(id), type, "func_def");
+				if(func) st.insert(string(id), type, "func_def", params);
+				else st.insert(string(id), type, "func_decl", params);
 			}
 			else {
 				string def = e->from;
-				// two cases:
-				// the funcion is previously defined or declared
-				// error is has been defined again
-				// else compare type and e->type and maybe all the parameters
+				if (def == "func_def") error("Duplicate function definition");
+				else {
+					if (!((e->type == type) & (e->params == params))) error("Mismatch in function definition");
+				} // check if the parameters and the type are the same
+
 			}
 		}
-
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
 
-		// st.insert(string(id), type);
-
 		if(fl != nullptr) {
 			for(Formal *f: *fl) {
-				// insert these vars in the scope of this function in the SymbolTable
 				// we should make a vector with all types of the parameters to check on calls
  				f->sem();
 			}
 		}
-		// TODO: here we should probably close the scope
 	}
 private:
 	const char* id;
@@ -785,7 +791,7 @@ public:
 	}
 	virtual void sem() {
 		// cout << "INSIDE SEM for FuncDecl" << endl;
-		hd->sem();
+		hd->sem(false);
 		cout << "--- Closing scope!" << endl;
 		st.closeScope();
 		// TODO: we need to check for duplicate declarations
