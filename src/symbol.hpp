@@ -44,14 +44,12 @@ public:
   SymbolEntry * lookup(string c, string def) {
 		if (def == "var"){
 			if (locals.find(c) == locals.end()) {
-				cout << "Did not found it " << endl;
 				return nullptr;
 			}
 	    return &locals[c];
 		}
 		else {
 			if (funcs.find(c) == funcs.end()) {
-				cout << "Did not found it " << endl;
 				return nullptr;
 			}
 	    return &funcs[c];
@@ -80,6 +78,9 @@ public:
   }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
+	Type getLastFuncType() const {
+		return (funcs.rbegin()->second).type;
+	}
 private:
 	map<string, SymbolEntry> locals;
   map<string, SymbolEntry> funcs;
@@ -111,6 +112,9 @@ public:
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();
   }
+	Type getReturnType() const {
+		return (scopes.rbegin()+1)->getLastFuncType();
+	}
 private:
   std::vector<Scope> scopes;
 };
