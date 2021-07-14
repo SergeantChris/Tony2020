@@ -246,10 +246,6 @@ public:
 			case(TC_nil): out << "List[...nil]" << ")"; break;
 		}
 	}
-	// virtual int getIntVal() override {
-	// 	if(tc_act == TC_int) return tc.integer;
-	// 	return -999;
-	// }
 	virtual void sem() override {
 			// cout << "INSIDE SEM for Const" << endl;
 			switch(tc_act) {
@@ -372,7 +368,6 @@ class Atom: virtual public Expr { //abstract class
 public:
 	virtual ~Atom() {}
 	virtual const char* getId() {return "";}
-	// virtual void setArraySize(int size) {}
 };
 
 class Id: public Atom {
@@ -385,17 +380,7 @@ public:
 	const char* getId() override {
 		return id;
 	}
-	// void setArraySize(int size) override {
-	// 	Type t = my_st.lookup(id);
-	// 	if(isPrimitive(t)) {
-	// 		error("Trying to set array size to Primitive");
-	// 	}
-	// 	else {
-	// 		my_st.setSize(id, size);
-	// 	}
-	// }
 	virtual void sem() override {
-		// papaspyrou:
 		// cout << "INSIDE SEM for Id" << endl;
 		cout << "Searching for: " << id << " ... ";
 		SymbolEntry *e = st.lookup(string(id));
@@ -432,18 +417,6 @@ public:
 		atom->sem();
 		atom->firstLayerCompositeTypeCheck("array");
 		expr->primTypeCheck(TYPE_int);
-		// cout << "-- VAL CHECK  (" << expr->getIntVal() << ")";
-		// int array_size = my_st.getSize(atom->getId());
-		// if(expr->getIntVal() < 0) {
-		// 	error("Index is negative, cant access element of array: %s", atom->getId());
-		// }
-		// else if(expr->getIntVal() >= array_size) {
-		// 	cout << endl;
-		// 	error("Trying to access element: %d of array %s.\nHowever array has only size: %d", expr->getIntVal(), atom->getId(), array_size);
-		// }
-		// else {
-		// 	cout << "  ---> ok" << endl;
-		// }
 	}
 private:
 	Atom* atom;
@@ -468,19 +441,12 @@ public:
 		out << "Assign(" << *atom << ", " << *expr << ")";
 	}
 	virtual void sem() {
-		// papaspyrou:
-		// SymbolEntry *lhs = st.lookup(atom)
-		// expr->type_check(lhs->type)
-		// αυτο που κανει ο παπασπυρου εμεις το κανουμε μεσα στο ID,
-		// δηλαδη ελεγχουμε αν υπαρχει (και το scope) της μεταβλητης μεσα στο semτης ID
 		// cout << "INSIDE SEM for Assign" << endl;
 
 		expr->sem();
 		atom->sem();
 		expr->typeCheck(atom->getType());
-		// if(expr->isMemoryAlloc()) {
-		// 	atom->setArraySize(expr->getExprIntVal());
-		// }
+
 	}
 private:
 	Atom* atom;
@@ -489,7 +455,7 @@ private:
 
 class Call: public Simple {
 public:
-	Call(const char* i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprList(e) {}
+	Call(const char* i, Type t, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprList(e), type(t){}
 	~Call() { delete id; delete exprList; }
 	virtual void printNode(ostream &out) const override {
 		out << "Call(" << id << ", ";
@@ -508,19 +474,24 @@ public:
 		// and also for the funcion itself (return type...)... not sure if true??
 
 		// check if the function is defined
-		SymbolEntry *name = st.lookup(string(id));
-		// there should be a vector of all the types of the parameters in the symbol table
+		SymbolEntry *func = st.lookup(string(id), "func_def");
+		vector<Type> params = func->params;
+		type = func->type;
+
 		int i = 0;
 		for(shared_ptr<Expr> e: *exprList) {
 			e->sem();
-			// e->typeCheck(name->parameters[i]);
+			e->typeCheck(params.at(i));
 			i++;
 		}
-
+	}
+	Type getType(){
+		return type;
 	}
 private:
 	const char* id;
 	vector<shared_ptr<Expr>>* exprList;
+	Type type;
 };
 
 class ReturnValue: public Atom {
@@ -534,8 +505,9 @@ public:
 		// cout << "INSIDE SEM for Return Value" << endl;
 		// TODO: initially we need to check if the function has return type
 		call->sem();
-
+		type = call->getType();
 	}
+
 private:
 	Call* call;
 };
@@ -554,6 +526,9 @@ public:
 		// we have to typecheck to see if the return type is the same as the type of the function
 		if(ret_val != nullptr) {
 			ret_val->sem();
+			// cout << ret_val->getType() << endl;
+			cout << "Checking return type ..." << endl;
+			ret_val->typeCheck(st.getReturnType());
 		}
 	}
 private:
@@ -670,6 +645,9 @@ public:
 			st.insert(string(i), type);
 		}
 	}
+	pair<Type, int> getType() {
+		return make_pair(type, idl->size());
+	}
 private:
 	Type type;
 	vector<const char*>* idl;
@@ -695,39 +673,36 @@ public:
 		}
 		out << ")";
 	}
-	virtual void sem() {
+	virtual void sem(bool func = true) {
 		// cout << "INSIDE SEM for Header" << endl;
-
-		// TODO: somewhere we need to check the header type and return type consistency
-		// type can be TYPE_null
-		// check if there has been a declaration of the function
 		if (string(id) != "main"){
+			cout << "Looking up for declaration of the function... ";
 			SymbolEntry *e = st.lookup(id, "func_def");
+			vector<Type> params;
+			for(Formal *f: *fl) {
+				pair<Type, int> pair_type = f->getType();
+				params.insert(params.end(), pair_type.second, pair_type.first);
+			}
 			if (e == nullptr) {
-				st.insert(string(id), type, "func_def");
+				if(func) st.insert(string(id), type, "func_def", params);
+				else st.insert(string(id), type, "func_decl", params);
 			}
 			else {
 				string def = e->from;
-				// two cases:
-				// the funcion is previously defined or declared
-				// error is has been defined again
-				// else compare type and e->type and maybe all the parameters
+				if (def == "func_def") error("Duplicate function definition");
+				else {
+					if (!((e->type == type) & (e->params == params))) error("Mismatch in function definition");
+				} // check if the parameters and the type are the same
 			}
 		}
-
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
 
-		// st.insert(string(id), type);
-
-		if(fl != nullptr) {
+		if((fl != nullptr) & func) {
 			for(Formal *f: *fl) {
-				// insert these vars in the scope of this function in the SymbolTable
-				// we should make a vector with all types of the parameters to check on calls
  				f->sem();
 			}
 		}
-		// TODO: here we should probably close the scope
 	}
 private:
 	const char* id;
@@ -785,7 +760,7 @@ public:
 	}
 	virtual void sem() {
 		// cout << "INSIDE SEM for FuncDecl" << endl;
-		hd->sem();
+		hd->sem(false);
 		cout << "--- Closing scope!" << endl;
 		st.closeScope();
 		// TODO: we need to check for duplicate declarations

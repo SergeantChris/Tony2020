@@ -44,23 +44,22 @@ public:
   SymbolEntry * lookup(string c, string def) {
 		if (def == "var"){
 			if (locals.find(c) == locals.end()) {
-				cout << "Did not found it " << endl;
 				return nullptr;
 			}
 	    return &locals[c];
 		}
 		else {
 			if (funcs.find(c) == funcs.end()) {
-				cout << "Did not found it " << endl;
 				return nullptr;
 			}
 	    return &funcs[c];
 		}
   }
 
-  void insert(string c, Type t, string def) {
+  void insert(string c, Type t, string def, vector<Type> v) {
 		if (def == "var"){
 			if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
+			if (funcs.find(c) != funcs.end()) error("Duplicate id: %s", c);
 			cout << "Inserting Var: " << c << " into locals" << endl;
 			locals[c] = SymbolEntry(t, offset++);
 			// cout << locals.find(c)->second;
@@ -70,8 +69,9 @@ public:
 		}
 		else {
 			if (funcs.find(c) != funcs.end()) error("Duplicate function name: %s", c);
+			if (locals.find(c) != locals.end()) error("Duplicate id: %s", c);
 			cout << "Inserting Fun: " << c << " into funcs" << endl;
-			funcs[c] = SymbolEntry(t, offset++, def);
+			funcs[c] = SymbolEntry(t, offset++, def, v);
 			// cout << locals.find(c)->second;
 			// cout << " id: " << c << endl;
 			++size;
@@ -80,6 +80,9 @@ public:
   }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
+	Type getLastFuncType() const {
+		return (funcs.rbegin()->second).type;
+	}
 private:
 	map<string, SymbolEntry> locals;
   map<string, SymbolEntry> funcs;
@@ -105,12 +108,15 @@ public:
     error("Variable %s not found", c);
     return nullptr;
   }
-  void insert(string c, Type t, string def = "var") {
-    scopes.back().insert(c, t, def);
+  void insert(string c, Type t, string def = "var", vector<Type> v = vector<Type>()) {
+    scopes.back().insert(c, t, def, v);
   }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();
   }
+	Type getReturnType() const {
+		return (scopes.rbegin()+1)->getLastFuncType();
+	}
 private:
   std::vector<Scope> scopes;
 };

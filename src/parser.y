@@ -224,8 +224,8 @@ simple:
 ;
 
 call:
-	T_id '(' expr_list ')'	{ $$ = new Call($1, $3); }
-| T_id '(' ')'						{ $$ = new Call($1); }
+	T_id '(' expr_list ')'	{Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
+| T_id '(' ')'						{Type t; t.p = TYPE_null; $$ = new Call($1, t); }
 ;
 
 expr_list:
