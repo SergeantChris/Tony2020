@@ -59,6 +59,7 @@ public:
   void insert(string c, Type t, string def, vector<Type> v) {
 		if (def == "var"){
 			if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
+			if (funcs.find(c) != funcs.end()) error("Duplicate id: %s", c);
 			cout << "Inserting Var: " << c << " into locals" << endl;
 			locals[c] = SymbolEntry(t, offset++);
 			// cout << locals.find(c)->second;
@@ -68,6 +69,7 @@ public:
 		}
 		else {
 			if (funcs.find(c) != funcs.end()) error("Duplicate function name: %s", c);
+			if (locals.find(c) != locals.end()) error("Duplicate id: %s", c);
 			cout << "Inserting Fun: " << c << " into funcs" << endl;
 			funcs[c] = SymbolEntry(t, offset++, def, v);
 			// cout << locals.find(c)->second;
