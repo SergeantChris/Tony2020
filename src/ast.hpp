@@ -675,10 +675,6 @@ public:
 	}
 	virtual void sem(bool func = true) {
 		// cout << "INSIDE SEM for Header" << endl;
-
-		// TODO: somewhere we need to check the header type and return type consistency
-		// type can be TYPE_null
-		// check if there has been a declaration of the function
 		if (string(id) != "main"){
 			cout << "Looking up for declaration of the function... ";
 			SymbolEntry *e = st.lookup(id, "func_def");
@@ -697,15 +693,13 @@ public:
 				else {
 					if (!((e->type == type) & (e->params == params))) error("Mismatch in function definition");
 				} // check if the parameters and the type are the same
-
 			}
 		}
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
 
-		if(fl != nullptr) {
+		if((fl != nullptr) & func) {
 			for(Formal *f: *fl) {
-				// we should make a vector with all types of the parameters to check on calls
  				f->sem();
 			}
 		}
