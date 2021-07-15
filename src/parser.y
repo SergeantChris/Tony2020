@@ -269,7 +269,7 @@ atom:
 	T_id								{ $$ = new Id($1); }
 | T_string						{ $$ = new String($1); } // TODO: semcheck can we Assign to string atoms
 | atom '[' expr ']'		{ $$ = new DirectAcc($1, $3); }
-| call								{ $$ = new ReturnValue($1); } //TODO: semcheck if has return type
+| call								{ $$ = new ReturnValue($1); } 
 ;
 %%
 
