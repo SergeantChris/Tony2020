@@ -31,5 +31,5 @@ void error(const std::string sFormat, ...) {    // check what happens when we ha
     std::cout << std::endl << BOLD("line:") << linecount << ": ";
     std::cout << BOLD(FRED("error:")) << std::endl;
     std::cout << std::string(zc.data(), zc.size()) << std::endl;
-    // exit(1);
+    exit(1);
 }

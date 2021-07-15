@@ -402,6 +402,7 @@ class String: public Atom, public Const {
 public:
 	String(const char* s): Const(s) {}
 	~String() {}
+
 };
 
 class DirectAcc: public Atom {
@@ -675,9 +676,9 @@ public:
 	}
 	virtual void sem(bool func = true) {
 		// cout << "INSIDE SEM for Header" << endl;
-		if (string(id) != "main"){
+		if (!st.EmptyScopes()){
 			cout << "Looking up for declaration of the function... ";
-			SymbolEntry *e = st.lookup(id, "func_def");
+			SymbolEntry *e = st.lookup(id, "func_decl");
 			vector<Type> params;
 			for(Formal *f: *fl) {
 				pair<Type, int> pair_type = f->getType();
