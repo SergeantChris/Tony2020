@@ -1834,13 +1834,13 @@ yyreduce:
 
   case 43:
 #line 227 "parser.y"
-                                { (yyval.call) = new Call((yyvsp[-3].cstr), (yyvsp[-1].exprl)); }
+                                {Type t; t.p = TYPE_null; (yyval.call) = new Call((yyvsp[-3].cstr), t, (yyvsp[-1].exprl)); }
 #line 1839 "parser.cpp"
     break;
 
   case 44:
 #line 228 "parser.y"
-                                                        { (yyval.call) = new Call((yyvsp[-2].cstr)); }
+                                                        {Type t; t.p = TYPE_null; (yyval.call) = new Call((yyvsp[-2].cstr), t); }
 #line 1845 "parser.cpp"
     break;
 
