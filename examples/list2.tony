@@ -1,0 +1,25 @@
+def main ():
+  char seed
+  decl list[int] qsort (char q; int a)
+  char[] marilena
+  int i
+  list[int] l
+
+  def list[int] qsort (char q; int a):
+    int seed
+		list[int] l
+    seed := 2
+    l := nil
+    l := seed # l
+    return l
+  end
+
+  marilena := "alexia"
+  %seed := "alexia"[0]
+  i := 1+3
+  l := nil
+  %"cute"[0] := 'x'
+  l := qsort(seed, i)
+  %i := l[1]
+
+end
