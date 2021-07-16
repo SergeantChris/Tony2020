@@ -234,10 +234,17 @@ expr_list:
 | expr_list ',' expr 	{ $1->push_back(shared_ptr<Expr>($3)); $$ = $1; }
 ;
 
+atom:
+	T_id								{ $$ = new Id($1); }
+| T_string						{ cout << "String " << $1 << endl; $$ = new String($1); } // TODO: semcheck can we Assign to string atoms
+| atom '[' expr ']'		{ $$ = new DirectAcc($1, $3); }
+| call								{ $$ = new ReturnValue($1); }
+;
+
 expr:
 	atom 														{ $$ = $1; }
-| T_constInt											{ $$ = new Const($1); }
-| T_constChar											{ $$ = new Const($1); }
+| T_constInt											{ cout << "T_constInt " << $1 << endl; $$ = new Const($1); }
+| T_constChar											{ cout << "T_constChar" << endl; $$ = new Const($1); }
 | '(' expr ')'										{ $$ = $2; }
 | '+' expr %prec PLUS_SIGN				{ $$ = new PreOp("+", $2); }
 | '-' expr %prec MINUS_SIGN				{ $$ = new PreOp("-", $2); }
@@ -265,12 +272,6 @@ expr:
 | "tail" '(' expr ')'							{ $$ = new PreOp("tail", $3); }
 ;
 
-atom:
-	T_id								{ $$ = new Id($1); }
-| T_string						{ $$ = new String($1); } // TODO: semcheck can we Assign to string atoms
-| atom '[' expr ']'		{ $$ = new DirectAcc($1, $3); }
-| call								{ $$ = new ReturnValue($1); } //TODO: semcheck if has return type
-;
 %%
 
 int main(int argc, char* argv[]) {

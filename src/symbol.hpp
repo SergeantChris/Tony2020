@@ -105,7 +105,7 @@ public:
 			SymbolEntry *e = i->lookup(c, def);
       if (e != nullptr) return e;
     }
-    error("Variable %s not found", c);
+    if (def != "func_decl") error("Variable %s not found", c);
     return nullptr;
   }
   void insert(string c, Type t, string def = "var", vector<Type> v = vector<Type>()) {
@@ -116,6 +116,10 @@ public:
   }
 	Type getReturnType() const {
 		return (scopes.rbegin()+1)->getLastFuncType();
+	}
+
+	bool EmptyScopes() const{
+		return scopes.empty();
 	}
 private:
   std::vector<Scope> scopes;
