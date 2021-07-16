@@ -170,6 +170,11 @@ public:
 			error("");
 			cout << "Type mismatch, expected outer type to be: " << s << ", but the given type is Primitive of type: " << type << endl;
 		}
+		else if(s == "@" && !((type.c)->getId() == "array" || (type.c)->getId() == "list" || (type.c)->getId() == "string")) {
+			cout << endl;
+			error("");
+			cout << "Type mismatch, expected type: array or list or string, but type: " << type.c->getId() << " was used" << endl;
+		}
 		else if((type.c)->getId() != s) {
 			cout << endl;
 			error("");
@@ -280,10 +285,6 @@ public:
 		// cout << "INSIDE SEM for PreOp" << endl;
 		expr->sem();
 			if(op == "+" || op == "-") {
-				// TODO: example of alteranative use
-				// Type t;
-				// t.p = TYPE_int;
-				// expr->typeCheck(t);
 				expr->primTypeCheck(TYPE_int);
 				type.p = TYPE_int;
 			}
@@ -416,7 +417,9 @@ public:
 		// cout << "INSIDE SEM for DirectAcc" << endl;
 		expr->sem();
 		atom->sem();
-		atom->firstLayerCompositeTypeCheck("array");
+		// atom->firstLayerCompositeTypeCheck("array");
+		// TODO: '@' refers to (array or list or string)
+		atom->firstLayerCompositeTypeCheck("@");
 		expr->primTypeCheck(TYPE_int);
 	}
 private:
@@ -447,7 +450,8 @@ public:
 		expr->sem();
 		atom->sem();
 		expr->typeCheck(atom->getType());
-
+		// TODO: we also have to check what atom is...
+		// for example it cant be string or call??
 	}
 private:
 	Atom* atom;
