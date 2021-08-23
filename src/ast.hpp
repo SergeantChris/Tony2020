@@ -8,6 +8,15 @@
 #include "lexer.hpp"
 #include "symbol.hpp"
 
+#include <llvm/IR/Value.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
+
 using namespace std;
 
 #define PRE_DEBUG 1
@@ -120,6 +129,99 @@ public:
 	virtual ~ASTnode() {}
 	virtual void printNode(ostream &out) const = 0;
 	virtual void sem() {}
+	virtual llvm::Value* compile() const = 0;
+
+	void llvm_compile_and_dump(bool optimize=true) {  // later used for compiler optimization flag
+    // Initialize
+    TheModule = llvm::make_unique<llvm::Module>("tony program", TheContext);
+    TheFPM = llvm::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
+    if(optimize) {
+			TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
+      TheFPM->add(llvm::createInstructionCombiningPass());
+      TheFPM->add(llvm::createReassociatePass());
+      TheFPM->add(llvm::createGVNPass());
+      TheFPM->add(llvm::createCFGSimplificationPass());
+    }
+
+    TheFPM->doInitialization();
+
+    // Initialize Types
+    i8 = llvm::IntegerType::get(TheContext, 8);
+    i32 = llvm::IntegerType::get(TheContext, 32);
+    i64 = llvm::IntegerType::get(TheContext, 64);
+
+    // Initialize Global Variavles
+    llvm::ArrayType *vars_type = llvm::ArrayType::get(i32, 26);
+    TheVars = new llvm::GlobalVariable(
+      *TheModule, vars_type, false, llvm::GlobalVariable::PrivateLinkage,
+      llvm::ConstantAggregateZero::get(vars_type), "vars");
+    TheVars->setAlignment(16);
+    llvm::ArrayType *nl_type = llvm::ArrayType::get(i8, 2);
+    TheNL = new llvm::GlobalVariable(
+      *TheModule, nl_type, true, llvm::GlobalVariable::PrivateLinkage,
+      llvm::ConstantArray::get(nl_type, {c8('\n'), c8('\0')}), "nl");
+    TheNL->setAlignment(1);
+
+    // Initialize Library Functions
+    llvm::FunctionType *writeInteger_type =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i64}, false);
+    TheWriteInteger =
+    llvm::Function::Create(writeInteger_type, llvm::Function::ExternalLinkage,
+    "writeInteger", TheModule.get());
+    llvm::FunctionType *writeString_type =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext),
+                        {llvm::PointerType::get(i8, 0)}, false);
+    TheWriteString =
+    llvm::Function::Create(writeString_type, llvm::Function::ExternalLinkage,
+    "writeString", TheModule.get());
+
+    // Define and start the main Function
+    llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
+    llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,
+                                "main", TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
+    Builder.SetInsertPoint(BB);
+
+    // Emit the program code
+    compile();
+    Builder.CreateRet(c32(0));
+
+    // Verify the IR
+    bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
+    if(bad) {
+      std::cerr << "the IR is BAD!" << std::endl; // make it with color so call error function
+      TheModule->print(llvm::outs(), nullptr);
+      std::exit(1);
+    }
+    // Optimize
+    TheFPM->run(*main);
+
+    // print
+    TheModule->print(llvm::outs(), nullptr);
+
+  }
+protected:
+  static llvm::LLVMContext TheContext;
+  static llvm::IRBuilder<> Builder;
+  static std::unique_ptr<llvm::Module> TheModule;
+  static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+
+  static llvm::GlobalVariable *TheVars;
+  static llvm::GlobalVariable *TheNL;
+
+  static llvm::Function *TheWriteInteger;
+  static llvm::Function *TheWriteString;
+
+  static llvm::Type *i8;
+  static llvm::Type *i32;
+  static llvm::Type *i64;
+
+  static llvm::ConstantInt* c32(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(32, n, true));
+  }
+  static llvm::ConstantInt* c8(char c) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
+  }
 };
 
 inline ostream& operator<<(ostream &out, const ASTnode &n) {
@@ -218,6 +320,10 @@ public:
 		}
 		else return (type.c)->getType();
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
+
 protected:
   Type type;
 };
@@ -261,6 +367,9 @@ public:
 				case(TC_nil): Type t; t.p = TYPE_null; type.c = new List(t); break;
 			}
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
 private:
 	union TC {
 		int integer;
@@ -301,6 +410,9 @@ public:
 				type = expr->getNestedType();
 			}
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
 private:
 	string op;
 	Expr* expr;
@@ -338,6 +450,9 @@ public:
 			type.p = TYPE_int;
 		}
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
 private:
 	string op;
 	Expr* expr1;
@@ -359,6 +474,9 @@ public:
 		Type final_type;
 		final_type.c = new Array(new_type);
 		type = final_type;
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 private:
 	Type new_type;
@@ -395,6 +513,9 @@ public:
 			type = t;
 		}
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
 private:
 	const char* id;
 };
@@ -421,6 +542,9 @@ public:
 		// TODO: '@' refers to (array or list or string)
 		atom->firstLayerCompositeTypeCheck("@");
 		expr->primTypeCheck(TYPE_int);
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 private:
 	Atom* atom;
@@ -452,6 +576,9 @@ public:
 		expr->typeCheck(atom->getType());
 		// TODO: we also have to check what atom is...
 		// for example it cant be string or call??
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 private:
 	Atom* atom;
@@ -490,6 +617,9 @@ public:
 			i++;
 		}
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
 	Type getType(){
 		return type;
 	}
@@ -512,7 +642,9 @@ public:
 		call->sem();
 		type = call->getType();
 	}
+	virtual llvm::Value* compile() const override {
 
+	}
 private:
 	Call* call;
 };
@@ -535,6 +667,9 @@ public:
 			cout << "Checking return type ..." << endl;
 			ret_val->typeCheck(st.getReturnType());
 		}
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 private:
 	Expr* ret_val;
@@ -574,6 +709,9 @@ public:
 			for(Branch *b: *elsif_branches) b->sem();
 		}
 		if(else_branch != nullptr) else_branch->sem();
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 private:
 	vector<shared_ptr<Stmt>>* cond_true;
@@ -617,7 +755,9 @@ public:
 		for(shared_ptr<Simple> s: *steps) 	s->sem();
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
 	}
+	virtual llvm::Value* compile() const override {
 
+	}
 private:
 	vector<shared_ptr<Simple>>* inits;
 	Expr* condition;
@@ -649,6 +789,9 @@ public:
 			// save each var into the SymbolTable in the scope of the function
 			st.insert(string(i), type);
 		}
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 	pair<Type, int> getType() {
 		return make_pair(type, idl->size());
@@ -709,6 +852,9 @@ public:
 			}
 		}
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
 private:
 	const char* id;
 	vector< Formal*>* fl;
@@ -749,6 +895,9 @@ public:
 		cout << "--- Closing scope!" << endl;
     st.closeScope();
 	}
+	virtual llvm::Value* compile() const override {
+
+	}
 private:
 	Header* hd;
 	vector<shared_ptr<Def>>* defl;
@@ -771,6 +920,9 @@ public:
 		// TODO: we need to check for duplicate declarations
 		// and also if the same header has been defined berfore with FuncDef
 		// and somehow check for the scopes
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 private:
 	Header* hd;
@@ -800,6 +952,9 @@ public:
 			// st.insert("a", type);
 			// cout << *st.lookup("a");
 		}
+	}
+	virtual llvm::Value* compile() const override {
+
 	}
 private:
 	Type type;
