@@ -1,11 +1,12 @@
 #include <iostream>
+#include <string.h>
 #include "error.hpp"
 
 
  // requires at least C++11
 void error(const std::string sFormat, ...) {    // check what happens when we have multiple error...maybe print them all and the with a flag just dont run the program
 
-    const char * const zcFormat = sFormat.c_str();
+    const char * const zcFormat = strdup(sFormat.c_str());
 
     // initialize use of the variable argument array
     va_list vaArgs;

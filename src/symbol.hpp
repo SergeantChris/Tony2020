@@ -4,6 +4,7 @@
 #include "error.hpp"
 #include <vector>
 #include <map>
+#include <sstream>
 #include "ast.hpp"
 
 using namespace std;
@@ -105,7 +106,12 @@ public:
 			SymbolEntry *e = i->lookup(c, def);
       if (e != nullptr) return e;
     }
-    if (def != "func_decl") error("Variable %s not found", c);
+    if (def != "func_decl") {
+    	ostringstream formatted;
+    	formatted << "Entry " << c << " not found";
+    	error(formatted.str());
+    	// error("Entry %s not found", c);
+    }
     return nullptr;
   }
   void insert(string c, Type t, string def = "var", vector<Type> v = vector<Type>()) {
