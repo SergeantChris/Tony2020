@@ -2,6 +2,7 @@
 #define __AST_HPP__
 
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <memory>
 #include <string>
@@ -137,8 +138,11 @@ public:
 		#endif
 		if(type.p != t) {
 			cout << endl;
-			error("");
-			cout << "Type mismatch, expected type: " << t << ", but type: " << type << " was used" << endl;
+			ostringstream formatted;
+			formatted << "Type mismatch, expected type: " << t << ", but type: " << type << " was used";
+			error(formatted.str());
+			// error("Type mismatch, expected type: %s but type: %s was used", "this", "that");
+			// cout << "Type mismatch, expected type: " << t << ", but type: " << type << " was used" << endl;
 		}
 		#if PRE_DEBUG
 		else {
@@ -152,8 +156,9 @@ public:
 		#endif
 		if(!(type == t)){
 			cout << endl;
-			cout << "Type mismatch, expected type: " << t << ", but type: " << type << " was used" << endl;
-			error("");
+			ostringstream formatted;
+			formatted << "Type mismatch, expected type: " << t << ", but type: " << type << " was used";
+			error(formatted.str());
 		}
 		#if PRE_DEBUG
 		else {
@@ -167,18 +172,21 @@ public:
 		#endif
 		if(isPrimitive(type)) {
 			cout << endl;
-			error("");
-			cout << "Type mismatch, expected outer type to be: " << s << ", but the given type is Primitive of type: " << type << endl;
+			ostringstream formatted;
+			formatted << "Type mismatch, expected outer type to be: " << s << ", but the given type is Primitive of type: " << type;
+			error(formatted.str());
 		}
 		else if(s == "@" && !((type.c)->getId() == "array" || (type.c)->getId() == "list" || (type.c)->getId() == "string")) {
 			cout << endl;
-			error("");
-			cout << "Type mismatch, expected type: array or list or string, but type: " << type.c->getId() << " was used" << endl;
+			ostringstream formatted;
+			formatted << "Type mismatch, expected type: array or list or string, but type: " << type.c->getId() << " was used";
+			error(formatted.str());
 		}
 		else if((type.c)->getId() != s) {
 			cout << endl;
-			error("");
-			cout << "Type mismatch, expected type: " << s << ", but type: " << type.c->getId() << " was used" << endl;
+			ostringstream formatted;
+			formatted << "Type mismatch, expected type: " << s << ", but type: " << type.c->getId() << " was used";
+			error(formatted.str());
 		}
 		#if PRE_DEBUG
 		else {
@@ -192,13 +200,15 @@ public:
 		#endif
 		if(isPrimitive(type)) {
 			cout << endl;
-			error("");
-			cout << "Type mismatch, expected outer type to be: " << s << " , but the given type is Primitive of type: " << type << endl;
+			ostringstream formatted;
+			formatted << "Type mismatch, expected outer type to be: " << s << " , but the given type is Primitive of type: " << type;			
+			error(formatted.str());
 		}
 		else if(!((type.c)->getType() == t)) {
 			cout << endl;
-			error("");
-			cout << "Type mismatch, expected type: " << (type.c)->getType() << ", but type: " << t << " was used" << endl;
+			ostringstream formatted;
+			formatted << "Type mismatch, expected type: " << (type.c)->getType() << ", but type: " << t << " was used";			
+			error(formatted.str());
 		}
 		#if PRE_DEBUG
 		else {
@@ -211,10 +221,11 @@ public:
 	}
 	Type getNestedType() {
 		if(isPrimitive(type)) {
-			error("");
-			cout << "Type mismatch, trying to acces nested type, but it doesent exist... type is Primitive: " << type << endl;
-			cout << "Returning the type as is..." << endl;
-			return type;
+			ostringstream formatted;
+			formatted << "Type mismatch, trying to acces nested type, but it doesent exist... type is Primitive: " << type << endl;
+			formatted << "Returning the type as is...";
+			error(formatted.str());
+			return type; // why is this here, error exits...
 		}
 		else return (type.c)->getType();
 	}
@@ -226,8 +237,8 @@ class Const: public virtual Expr {
 public:
 	Const(int i)		 			{ tc.integer = i; tc_act = TC_int; }
 	Const(char c) 				{ tc.character = c; tc_act = TC_char; }
-	Const(const char* s)  { tc.str = s; tc_act = TC_str; }
-	Const(string v) { // for boolean types and nil
+	// Const(const char* s)  { tc.str = s; tc_act = TC_str; }
+	Const(string v) { // for boolean types and nil + string literals
 		if(v == "true") {
 			tc.boolean = true;
 			tc_act = TC_bool;
@@ -236,8 +247,12 @@ public:
 			tc.boolean = false;
 			tc_act = TC_bool;
 		}
-		else if(v == "nil"){
+		else if(v == "nil") {
 			tc_act = TC_nil;
+		}
+		else {
+			tc.str = v.c_str();
+			tc_act = TC_str;
 		}
 	}
 	~Const() {}
