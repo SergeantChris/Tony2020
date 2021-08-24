@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include "ast.hpp"
+#include <llvm/IR/Value.h>
 
 using namespace std;
 
@@ -24,10 +25,12 @@ union Type {
 struct SymbolEntry {
   Type type;
   int offset;
+	llvm::Value *v;
 	string from; // "var" or "func_def" of "func_decl"
-	vector<Type> params; // vector with the types or the parameters - in func_decl
+	vector<Type> params; // vector with the types of the parameters - in func_decl
   SymbolEntry() {}
   SymbolEntry(Type t, int ofs, string fr = "var", vector<Type> v = vector<Type>()) : type(t), offset(ofs), from(fr), params(v) {}
+	SymbolEntry(int ofs, llvm::Value *v, string fr = "var") : offset(ofs), v(v), from(fr){}
 };
 
 inline ostream& operator<<(ostream &out, const Type t);
@@ -117,7 +120,6 @@ public:
 	Type getReturnType() const {
 		return (scopes.rbegin()+1)->getLastFuncType();
 	}
-
 	bool EmptyScopes() const{
 		return scopes.empty();
 	}

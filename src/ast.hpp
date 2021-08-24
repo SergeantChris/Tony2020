@@ -134,6 +134,7 @@ public:
 	void llvm_compile_and_dump(bool optimize=true) {  // later used for compiler optimization flag
     // Initialize
     TheModule = llvm::make_unique<llvm::Module>("tony program", TheContext);
+		// TheModule is an LLVM construct that contains functions and global variables
     TheFPM = llvm::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
     if(optimize) {
 			TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
@@ -146,39 +147,41 @@ public:
     TheFPM->doInitialization();
 
     // Initialize Types
+		i1 = llvm::IntegerType::get(TheContext, 1);
     i8 = llvm::IntegerType::get(TheContext, 8);
     i32 = llvm::IntegerType::get(TheContext, 32);
-    i64 = llvm::IntegerType::get(TheContext, 64);
+    // i64 = llvm::IntegerType::get(TheContext, 64);
 
     // Initialize Global Variavles
-    llvm::ArrayType *vars_type = llvm::ArrayType::get(i32, 26);
-    TheVars = new llvm::GlobalVariable(
-      *TheModule, vars_type, false, llvm::GlobalVariable::PrivateLinkage,
-      llvm::ConstantAggregateZero::get(vars_type), "vars");
-    TheVars->setAlignment(16);
-    llvm::ArrayType *nl_type = llvm::ArrayType::get(i8, 2);
-    TheNL = new llvm::GlobalVariable(
-      *TheModule, nl_type, true, llvm::GlobalVariable::PrivateLinkage,
-      llvm::ConstantArray::get(nl_type, {c8('\n'), c8('\0')}), "nl");
-    TheNL->setAlignment(1);
+    // llvm::ArrayType *vars_type = llvm::ArrayType::get(i32, 26);
+    // TheVars = new llvm::GlobalVariable(
+    //   *TheModule, vars_type, false, llvm::GlobalVariable::PrivateLinkage,
+    //   llvm::ConstantAggregateZero::get(vars_type), "vars");
+    // TheVars->setAlignment(16);
+    // llvm::ArrayType *nl_type = llvm::ArrayType::get(i8, 2);
+    // TheNL = new llvm::GlobalVariable(
+    //   *TheModule, nl_type, true, llvm::GlobalVariable::PrivateLinkage,
+    //   llvm::ConstantArray::get(nl_type, {c8('\n'), c8('\0')}), "nl");
+    // TheNL->setAlignment(1);
 
     // Initialize Library Functions
-    llvm::FunctionType *writeInteger_type =
-      llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i64}, false);
-    TheWriteInteger =
-    llvm::Function::Create(writeInteger_type, llvm::Function::ExternalLinkage,
-    "writeInteger", TheModule.get());
-    llvm::FunctionType *writeString_type =
-      llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext),
-                        {llvm::PointerType::get(i8, 0)}, false);
-    TheWriteString =
-    llvm::Function::Create(writeString_type, llvm::Function::ExternalLinkage,
-    "writeString", TheModule.get());
+    // llvm::FunctionType *writeInteger_type =
+    //   llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i64}, false);
+    // TheWriteInteger =
+    // llvm::Function::Create(writeInteger_type, llvm::Function::ExternalLinkage,
+    // "writeInteger", TheModule.get());
+    // llvm::FunctionType *writeString_type =
+    //   llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext),
+    //                     {llvm::PointerType::get(i8, 0)}, false);
+    // TheWriteString =
+    // llvm::Function::Create(writeString_type, llvm::Function::ExternalLinkage,
+    // "writeString", TheModule.get());
 
     // Define and start the main Function
+		// maybe define the main after reading the arguments or change the name
     llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
     llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,
-                                "main", TheModule.get());
+                                									"main", TheModule.get());
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
     Builder.SetInsertPoint(BB);
 
@@ -203,15 +206,20 @@ public:
 protected:
   static llvm::LLVMContext TheContext;
   static llvm::IRBuilder<> Builder;
-  static std::unique_ptr<llvm::Module> TheModule;
-  static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+  static unique_ptr<llvm::Module> TheModule;
+  static unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+	// static map<string, llvm::Value *> NamedValues;
+	// NamedValues: keeps track of which values are defined in the current scope
+	// and what their LLVM representation is
+	// maybe include it in the symbol table (add a Value field)
 
-  static llvm::GlobalVariable *TheVars;
-  static llvm::GlobalVariable *TheNL;
+  // static llvm::GlobalVariable *TheVars;
+  // static llvm::GlobalVariable *TheNL;
+	//
+  // static llvm::Function *TheWriteInteger;
+  // static llvm::Function *TheWriteString;
 
-  static llvm::Function *TheWriteInteger;
-  static llvm::Function *TheWriteString;
-
+	static llvm::Type *i1;
   static llvm::Type *i8;
   static llvm::Type *i32;
   static llvm::Type *i64;
@@ -221,6 +229,9 @@ protected:
   }
   static llvm::ConstantInt* c8(char c) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
+  }
+	static llvm::ConstantInt* c1(bool b) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(1, b, true));
   }
 };
 
@@ -320,9 +331,7 @@ public:
 		}
 		else return (type.c)->getType();
 	}
-	virtual llvm::Value* compile() const override {
-
-	}
+	// virtual llvm::Value* compile() const override {}
 
 protected:
   Type type;
@@ -358,17 +367,24 @@ public:
 		}
 	}
 	virtual void sem() override {
-			// cout << "INSIDE SEM for Const" << endl;
-			switch(tc_act) {
-				case(TC_int): type.p = TYPE_int; break;
-				case(TC_char): type.p = TYPE_char; break;
-				case(TC_str): type.p = TYPE_str; break;
-				case(TC_bool): type.p = TYPE_bool; break;
-				case(TC_nil): Type t; t.p = TYPE_null; type.c = new List(t); break;
-			}
+		// cout << "INSIDE SEM for Const" << endl;
+		switch(tc_act) {
+			case(TC_int): type.p = TYPE_int; break;
+			case(TC_char): type.p = TYPE_char; break;
+			case(TC_str): type.p = TYPE_str; break;
+			case(TC_bool): type.p = TYPE_bool; break;
+			case(TC_nil): Type t; t.p = TYPE_null; type.c = new List(t); break;
+		}
 	}
 	virtual llvm::Value* compile() const override {
-
+		switch(tc_act) {
+			case(TC_int): return c32(tc.integer);
+			case(TC_char): return c8(tc.character);
+			case(TC_str):  break;
+			case(TC_bool): return c1(tc.boolean);
+			case(TC_nil): return nullptr;
+		}
+    return nullptr;
 	}
 private:
 	union TC {
@@ -411,7 +427,14 @@ public:
 			}
 	}
 	virtual llvm::Value* compile() const override {
-
+		llvm::Value *val = expr->compile();
+		if (op == "+") return val;
+		else if (op == "-") return Builder.CreateNeg(val, "negsign");
+		else if (op == "not") return Builder.CreateNot(val, "nottmp");
+		else if (op == "nil?") return nullptr;// check if the list is empty and return the Value
+		else if (op == "head") return nullptr;// return the first value of the List
+		else if(op == "tail") return nullptr;//return the last value of the list
+		else return nullptr;
 	}
 private:
 	string op;
@@ -451,7 +474,24 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
+		llvm::Value *l = expr1->compile();
+    llvm::Value *r = expr2->compile();
 
+    if (op == "+") return Builder.CreateAdd(l, r, "addtmp");
+    else if (op == "-") return Builder.CreateSub(l, r, "subtmp");
+    else if (op == "*") return Builder.CreateMul(l, r, "multmp");
+    else if (op == "/") return Builder.CreateSDiv(l, r, "divtmp");
+    else if (op == "mod") return Builder.CreateSRem(l, r, "modtmp");
+		else if (op == "and") return Builder.CreateAnd(l, r, "andtmp");
+		else if (op == "or") return Builder.CreateOr(l, r, "ortmp");
+		else if (op == "#") return nullptr; //adds to the list
+		else if (op == "=") return Builder.CreateICmpEQ(l, r, "eqtmp");
+		else if (op == "<>") return Builder.CreateICmpNE(l, r, "netmp");
+		else if (op == "<") return Builder.CreateICmpSLT(l, r, "slttmp");
+		else if (op == ">") return Builder.CreateICmpSGT(l, r, "sgttmp");
+		else if (op == "<=") return Builder.CreateICmpSLE(l, r, "sletmp");
+		else if (op == ">=") return Builder.CreateICmpSGE(l, r, "sgemp");
+    else return nullptr;
 	}
 private:
 	string op;
@@ -476,7 +516,22 @@ public:
 		type = final_type;
 	}
 	virtual llvm::Value* compile() const override {
+		llvm::Type *element_type;
+		llvm::Value *v = expr->compile(); // size of array
+		llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
+		uint64_t size = ci->llvm::ConstantInt::getZExtValue();
+		// initialize a array of type new_type and size expr
+		switch (new_type.p) {
+			case TYPE_int: element_type = i32;
+			case TYPE_bool: element_type = i1;
+			case TYPE_char: element_type = i8;
+			default: break;
+		}
 
+		// if (new_type.c->getId() == "array") element_type = //array;
+		// else element_type = list;
+
+		llvm::ArrayType *array = llvm::ArrayType::get(element_type, size);
 	}
 private:
 	Type new_type;
@@ -514,7 +569,9 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
-
+		string var  = id;
+		Value *v = st.lookup(var)->v;
+    return Builder.CreateLoad(v, var);
 	}
 private:
 	const char* id;
@@ -544,7 +601,11 @@ public:
 		expr->primTypeCheck(TYPE_int);
 	}
 	virtual llvm::Value* compile() const override {
-
+		llvm::Value *vexpr = expr->compile();
+		llvm::Value *vatom = atom->compile();
+		// Value *v = Builder.CreateGEP(TheVars, {c32(0), vexpr)}, name);
+		// return Builder.CreateLoad(v, name);
+		return nullptr;
 	}
 private:
 	Atom* atom;
@@ -578,7 +639,10 @@ public:
 		// for example it cant be string or call??
 	}
 	virtual llvm::Value* compile() const override {
-
+		llvm::Value *lhs = expr->compile();
+		llvm::Value *rhs = atom->compile();
+		Builder.CreateStore(rhs, lhs);
+		return nullptr;
 	}
 private:
 	Atom* atom;
