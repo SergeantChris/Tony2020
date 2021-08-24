@@ -29,7 +29,7 @@ void error(const std::string sFormat, ...) {    // check what happens when we ha
     std::vsnprintf(zc.data(), zc.size(), zcFormat, vaArgs);
     va_end(vaArgs);
     std::cout << std::endl << BOLD("line:") << linecount << ": ";
-    std::cout << BOLD(FRED("error:")) << std::endl;
+    std::cout << BOLD(FRED("error: "));
     std::cout << std::string(zc.data(), zc.size()) << std::endl;
     exit(1);
 }
