@@ -218,7 +218,7 @@ simple_list:
 ;
 
 simple:
-	"skip"					{ $$ = nullptr;}
+	"skip"					{ $$ = new NoAction();}
 | atom ":=" expr	{ $$ = new Assign($1, $3); }
 | call						{ $$ = $1; }
 ;

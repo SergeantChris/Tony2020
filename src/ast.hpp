@@ -452,6 +452,16 @@ public:
 	virtual ~Simple() {}
 };
 
+class NoAction: public Simple {
+public:
+	NoAction() {}
+	~NoAction() {}
+	virtual void printNode(ostream &out) const override {
+		out << "no_action";
+	}
+	virtual void sem() {}
+};
+
 class Assign: public Simple {
 public:
 	Assign(Atom* a, Expr* e): atom(a), expr(e) {}
@@ -685,7 +695,6 @@ public:
 		out << "Header(" << id;
 		if(type.p != TYPE_null) out << ", " << type;
 		if(fl != nullptr) {
-
 			for(Formal *f: *fl) {
 				out << ", ";
 				out << *f;
