@@ -238,20 +238,22 @@ public:
 	Const(int i)		 			{ tc.integer = i; tc_act = TC_int; }
 	Const(char c) 				{ tc.character = c; tc_act = TC_char; }
 	// Const(const char* s)  { tc.str = s; tc_act = TC_str; }
-	Const(string v) { // for boolean types and nil + string literals
-		if(v == "true") {
-			tc.boolean = true;
-			tc_act = TC_bool;
-		}
-		else if(v == "false") {
-			tc.boolean = false;
-			tc_act = TC_bool;
-		}
-		else if(v == "nil") {
-			tc_act = TC_nil;
+	Const(string v, bool special=1) { // for boolean types and nil + string literals
+		if(special == 1) {
+			if(v == "true") {
+				tc.boolean = true;
+				tc_act = TC_bool;
+			}
+			else if(v == "false") {
+				tc.boolean = false;
+				tc_act = TC_bool;
+			}
+			else if(v == "nil") {
+				tc_act = TC_nil;
+			}
 		}
 		else {
-			tc.str = v.c_str();
+			tc.str = strdup(v.c_str());
 			tc_act = TC_str;
 		}
 	}
@@ -416,9 +418,8 @@ private:
 
 class String: public Atom, public Const {
 public:
-	String(const char* s): Const(s) {}
+	String(string s): Const(s, 0) {}
 	~String() {}
-
 };
 
 class DirectAcc: public Atom {
