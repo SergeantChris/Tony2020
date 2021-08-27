@@ -25,12 +25,10 @@ union Type {
 struct SymbolEntry {
   Type type;
   int offset;
-	llvm::Value *v;
 	string from; // "var" or "func_def" of "func_decl"
 	vector<Type> params; // vector with the types of the parameters - in func_decl
   SymbolEntry() {}
   SymbolEntry(Type t, int ofs, string fr = "var", vector<Type> v = vector<Type>()) : type(t), offset(ofs), from(fr), params(v) {}
-	SymbolEntry(int ofs, llvm::Value *v, string fr = "var") : offset(ofs), v(v), from(fr){}
 };
 
 inline ostream& operator<<(ostream &out, const Type t);
@@ -42,7 +40,7 @@ inline ostream& operator<<(ostream &out, const SymbolEntry e) {
 
 class Scope {
 public:
-  Scope(int ofs = -1) : locals(), offset(ofs), size(0) {}
+  Scope(int ofs = -1) : locals(), funcs(), offset(ofs), size(0) {}
 
   SymbolEntry * lookup(string c, string def) {
 		if (def == "var"){
@@ -81,6 +79,14 @@ public:
 			// cout << " Size: " << size << endl;
 		}
   }
+	// void assign_value(string c, llvm::Value *val) {
+	// 	SymbolEntry *e = &locals[c];
+	// 	e->v = val;
+	// }
+	// void assign_func(string c, llvm::Function *func) {
+	// 	SymbolEntry *e = &funcs[c];
+	// 	e->f = func;
+  // }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
 	Type getLastFuncType() const {
@@ -114,6 +120,12 @@ public:
   void insert(string c, Type t, string def = "var", vector<Type> v = vector<Type>()) {
     scopes.back().insert(c, t, def, v);
   }
+	// void assign_value(string c, llvm::Value *val, string def = "var") {
+  //   scopes.back().assign_value(c, val);
+  // }
+	// void assign_func(string c, llvm::Function *func) {
+  //   scopes.back().assign_func(c, func);
+  // }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();
   }
@@ -128,5 +140,72 @@ private:
 };
 
 extern SymbolTable st;
+
+struct ValueEntry {
+	llvm::Value *val;
+	llvm::Function *func;
+  int offset;
+  ValueEntry() {}
+  ValueEntry(llvm::Value *v, int ofs) : val(v), offset(ofs) {}
+	ValueEntry(llvm::Function *f, int ofs) : func(f), offset(ofs) {}
+};
+
+class CompileScope {
+public:
+  CompileScope(int ofs = -1) : defined(), offset(ofs), size(0) {}
+  ValueEntry * lookup(string c) {
+			if (defined.find(c) == defined.end())
+				return nullptr;
+	    return &defined[c];
+  }
+  void insert(string c, llvm::Value *v) {
+		defined[c] = ValueEntry(v, offset++);
+    ++size;
+  }
+	void insert(string c, llvm::Function *f) {
+		defined[c] = ValueEntry(f, offset++);
+    ++size;
+  }
+  int getSize() const { return size; }
+  int getOffset() const { return offset; }
+private:
+	map<string, ValueEntry> defined;
+  int offset;
+  int size;
+};
+
+class ValueTable {
+public:
+  void openScope() {
+    int ofs = scopes.empty() ? 0 : scopes.back().getOffset();
+    scopes.push_back(CompileScope(ofs));
+  }
+  void closeScope() {
+    scopes.pop_back();
+  }
+  ValueEntry * lookup(string c) {
+    for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
+			ValueEntry *e = i->lookup(c);
+      if (e != nullptr) return e;
+    }
+    return nullptr;
+  }
+  void insert(string c, llvm::Value *v) {
+    scopes.back().insert(c, v);
+  }
+	void insert(string c, llvm::Function *f) {
+    scopes.back().insert(c, f);
+  }
+  int getSizeOfCurrentScope() const {
+    return scopes.back().getSize();
+  }
+	bool EmptyScopes() const{
+		return scopes.empty();
+	}
+private:
+  std::vector<CompileScope> scopes;
+};
+
+extern ValueTable vt;
 
 #endif

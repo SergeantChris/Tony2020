@@ -13,6 +13,7 @@ using namespace std;
 #define YYERROR_VERBOSE 1
 
 SymbolTable st;
+ValueTable vt;
 
 int linecount = 1;
 int opt_flag=0, lco_flag=0, ico_flag=0;

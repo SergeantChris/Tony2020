@@ -209,9 +209,9 @@ protected:
   static unique_ptr<llvm::Module> TheModule;
   static unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 	// static map<string, llvm::Value *> NamedValues;
+	// static map<string, llvm::Function *> NamedFuncs;
 	// NamedValues: keeps track of which values are defined in the current scope
 	// and what their LLVM representation is
-	// maybe include it in the symbol table (add a Value field)
 
   // static llvm::GlobalVariable *TheVars;
   // static llvm::GlobalVariable *TheNL;
@@ -380,7 +380,6 @@ public:
 		switch(tc_act) {
 			case(TC_int): return c32(tc.integer);
 			case(TC_char): return c8(tc.character);
-			case(TC_str):  break;
 			case(TC_bool): return c1(tc.boolean);
 			case(TC_nil): return nullptr;
 		}
@@ -532,6 +531,7 @@ public:
 		// else element_type = list;
 
 		llvm::ArrayType *array = llvm::ArrayType::get(element_type, size);
+		return nullptr;
 	}
 private:
 	Type new_type;
@@ -570,7 +570,8 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		string var  = id;
-		Value *v = st.lookup(var)->v;
+		ValueEntry *e = vt.lookup(var);
+		llvm::Value *v = e->val;
     return Builder.CreateLoad(v, var);
 	}
 private:
@@ -639,9 +640,11 @@ public:
 		// for example it cant be string or call??
 	}
 	virtual llvm::Value* compile() const override {
-		llvm::Value *lhs = expr->compile();
-		llvm::Value *rhs = atom->compile();
-		Builder.CreateStore(rhs, lhs);
+		llvm::Value *rhs = expr->compile();
+		llvm::Value *lhs = atom->compile();
+		Builder.CreateStore(lhs, rhs);
+		string name = string(atom->getId());
+		vt.insert(name, lhs);
 		return nullptr;
 	}
 private:
@@ -674,6 +677,8 @@ public:
 		vector<Type> params = func->params;
 		type = func->type;
 
+		// TODO: check size of the arguments!
+
 		int i = 0;
 		for(shared_ptr<Expr> e: *exprList) {
 			e->sem();
@@ -682,7 +687,19 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
+		string func_name = string(id);
+		ValueEntry *func = vt.lookup(func_name);
+		llvm::Function *func_value = func->func;
 
+		int i = 0;
+		vector<llvm::Value *> argsv;
+		for(shared_ptr<Expr> e: *exprList) {
+			llvm::Value *v = e->compile();
+			argsv.push_back(v);
+			i++;
+		}
+		return Builder.CreateCall(func_value, argsv, "calltmp");
+		// we have to add the values in the argsv in the variableTable in the scope of the function
 	}
 	Type getType(){
 		return type;
@@ -707,7 +724,7 @@ public:
 		type = call->getType();
 	}
 	virtual llvm::Value* compile() const override {
-
+		return call->compile();
 	}
 private:
 	Call* call;
@@ -727,13 +744,14 @@ public:
 		// we have to typecheck to see if the return type is the same as the type of the function
 		if(ret_val != nullptr) {
 			ret_val->sem();
-			// cout << ret_val->getType() << endl;
 			cout << "Checking return type ..." << endl;
 			ret_val->typeCheck(st.getReturnType());
 		}
 	}
 	virtual llvm::Value* compile() const override {
-
+		if(ret_val != nullptr)
+			return ret_val->compile();
+		else return nullptr;
 	}
 private:
 	Expr* ret_val;
@@ -775,7 +793,31 @@ public:
 		if(else_branch != nullptr) else_branch->sem();
 	}
 	virtual llvm::Value* compile() const override {
+		llvm::Value *v = condition->compile();
+		llvm::Value *cond = Builder.CreateICmpNE(v, c32(0), "if_cond");
+		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+		llvm::BasicBlock *ThenBB =
+      llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+		llvm::BasicBlock *IfElseBB =
+      llvm::BasicBlock::Create(TheContext, "ifelse", TheFunction);
+		llvm::BasicBlock *ElseBB =
+      llvm::BasicBlock::Create(TheContext, "else", TheFunction);
+		llvm::BasicBlock *AfterBB =
+      llvm::BasicBlock::Create(TheContext, "endif", TheFunction);
 
+		Builder.CreateCondBr(cond, ThenBB, IfElseBB);
+		Builder.SetInsertPoint(ThenBB);
+		for(shared_ptr<Stmt> s: *cond_true) s->compile();
+		Builder.CreateBr(AfterBB);
+		Builder.SetInsertPoint(IfElseBB);
+		if(elsif_branches != nullptr)
+			for(Branch *b: *elsif_branches) b->compile();
+		Builder.CreateBr(AfterBB);
+    Builder.SetInsertPoint(ElseBB);
+		if(else_branch != nullptr) else_branch->compile();
+		Builder.CreateBr(AfterBB);
+    Builder.SetInsertPoint(AfterBB);
+		return nullptr;
 	}
 private:
 	vector<shared_ptr<Stmt>>* cond_true;
@@ -820,7 +862,33 @@ public:
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
 	}
 	virtual llvm::Value* compile() const override {
+		for(shared_ptr<Simple> s: *inits) 	s->compile();
+		llvm::Value *cond = condition->compile();
+		llvm::BasicBlock *PrevBB = Builder.GetInsertBlock();
+    llvm::Function *TheFunction = PrevBB->getParent();
 
+    llvm::BasicBlock *LoopBB =
+      llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
+    llvm::BasicBlock *BodyBB =
+      llvm::BasicBlock::Create(TheContext, "body", TheFunction);
+    llvm::BasicBlock *AfterBB =
+    llvm::BasicBlock::Create(TheContext, "endfor", TheFunction);
+
+    Builder.CreateBr(LoopBB);
+    Builder.SetInsertPoint(LoopBB);
+		llvm::PHINode *phi_iter = Builder.CreatePHI(i32, 2, "iter");
+    phi_iter->addIncoming(cond, PrevBB);
+		llvm::Value *loop_cond =
+      Builder.CreateICmpSGT(phi_iter, c32(0), "loop_cond");
+		Builder.CreateCondBr(loop_cond, BodyBB, AfterBB);
+    Builder.SetInsertPoint(BodyBB);
+		for(shared_ptr<Simple> s: *steps) 	s->compile();
+		llvm::Value *remaining = condition->compile();
+		for(shared_ptr<Stmt> s: *cond_true) s->compile();
+		phi_iter->addIncoming(remaining, Builder.GetInsertBlock());
+    Builder.CreateBr(LoopBB);
+    Builder.SetInsertPoint(AfterBB);
+		return nullptr;
 	}
 private:
 	vector<shared_ptr<Simple>>* inits;
@@ -855,7 +923,7 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
-
+		return nullptr;
 	}
 	pair<Type, int> getType() {
 		return make_pair(type, idl->size());
@@ -902,22 +970,43 @@ public:
 			else {
 				string def = e->from;
 				if (def == "func_def") error("Duplicate function definition");
-				else {
+				else
 					if (!((e->type == type) & (e->params == params))) error("Mismatch in function definition");
-				} // check if the parameters and the type are the same
-			}
+			}	// check if the parameters and the type are the same
 		}
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
 
-		if((fl != nullptr) & func) {
-			for(Formal *f: *fl) {
+		if((fl != nullptr) & func)
+			for(Formal *f: *fl)
  				f->sem();
-			}
-		}
 	}
 	virtual llvm::Value* compile() const override {
+		llvm::Type *element_type;
+		switch (type.p) {
+			case TYPE_int: element_type = i32;
+			case TYPE_bool: element_type = i1;
+			case TYPE_char: element_type = i8;
+			default: break;
+		}
+		string name = string(id);
+		// array and list type?
+		// vector<llvm::Type*> params;
+		vector<Type> params;
+		for(Formal *f: *fl) {
+			pair<Type, int> pair_type = f->getType();
+			params.insert(params.end(), pair_type.second, pair_type.first);
+		}
+		// TODO:
+		// llvm::FunctionType *FT =
+    // 	llvm::FunctionType::get(element_type, params, false);
+		llvm::FunctionType *FT =
+    	llvm::FunctionType::get(element_type, i8, false);
 
+		llvm::Function *F =
+		  llvm::Function::Create(FT, llvm::Function::ExternalLinkage, name, TheModule.get());
+
+		return nullptr;
 	}
 private:
 	const char* id;
@@ -960,7 +1049,10 @@ public:
     st.closeScope();
 	}
 	virtual llvm::Value* compile() const override {
-
+		hd->compile();
+		for(shared_ptr<Def> d: *defl) d->compile();
+		for(shared_ptr<Stmt> s: *stmtl) s->compile();
+		return nullptr;
 	}
 private:
 	Header* hd;
@@ -986,7 +1078,8 @@ public:
 		// and somehow check for the scopes
 	}
 	virtual llvm::Value* compile() const override {
-
+		hd->compile();
+		return nullptr;
 	}
 private:
 	Header* hd;
@@ -1018,7 +1111,7 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
-
+		return nullptr;
 	}
 private:
 	Type type;
