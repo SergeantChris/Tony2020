@@ -79,14 +79,6 @@ public:
 			// cout << " Size: " << size << endl;
 		}
   }
-	// void assign_value(string c, llvm::Value *val) {
-	// 	SymbolEntry *e = &locals[c];
-	// 	e->v = val;
-	// }
-	// void assign_func(string c, llvm::Function *func) {
-	// 	SymbolEntry *e = &funcs[c];
-	// 	e->f = func;
-  // }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
 	Type getLastFuncType() const {
@@ -120,12 +112,6 @@ public:
   void insert(string c, Type t, string def = "var", vector<Type> v = vector<Type>()) {
     scopes.back().insert(c, t, def, v);
   }
-	// void assign_value(string c, llvm::Value *val, string def = "var") {
-  //   scopes.back().assign_value(c, val);
-  // }
-	// void assign_func(string c, llvm::Function *func) {
-  //   scopes.back().assign_func(c, func);
-  // }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();
   }
@@ -159,12 +145,24 @@ public:
 	    return &defined[c];
   }
   void insert(string c, llvm::Value *v) {
-		defined[c] = ValueEntry(v, offset++);
-    ++size;
-  }
+		if (defined.find(c) != defined.end()) {
+				int ofst = defined[c].offset;
+				defined[c] = ValueEntry(v, ofst);
+		}
+		else {
+			defined[c] = ValueEntry(v, offset++);
+			++size;
+		}
+	}
 	void insert(string c, llvm::Function *f) {
-		defined[c] = ValueEntry(f, offset++);
-    ++size;
+		if (defined.find(c) != defined.end()) {
+				int ofst = defined[c].offset;
+				defined[c] = ValueEntry(f, ofst);
+		}
+		else {
+			defined[c] = ValueEntry(f, offset++);
+	    ++size;
+		}
   }
   int getSize() const { return size; }
   int getOffset() const { return offset; }

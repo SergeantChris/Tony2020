@@ -212,6 +212,7 @@ protected:
 	// static map<string, llvm::Function *> NamedFuncs;
 	// NamedValues: keeps track of which values are defined in the current scope
 	// and what their LLVM representation is
+	// the only values that can be in the NamedValues map are function arguments.
 
   // static llvm::GlobalVariable *TheVars;
   // static llvm::GlobalVariable *TheNL;
@@ -642,7 +643,7 @@ public:
 	virtual llvm::Value* compile() const override {
 		llvm::Value *rhs = expr->compile();
 		llvm::Value *lhs = atom->compile();
-		Builder.CreateStore(lhs, rhs);
+		Builder.CreateStore(rhs, lhs);
 		string name = string(atom->getId());
 		vt.insert(name, lhs);
 		return nullptr;
@@ -687,9 +688,11 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
+		// Look up the name in the global module table.
 		string func_name = string(id);
-		ValueEntry *func = vt.lookup(func_name);
-		llvm::Function *func_value = func->func;
+		llvm::Function *func_value = TheModule->getFunction(func_name);
+		// ValueEntry *func = vt.lookup(func_name);
+		// llvm::Function *func_value = func->func;
 
 		int i = 0;
 		vector<llvm::Value *> argsv;
@@ -699,7 +702,6 @@ public:
 			i++;
 		}
 		return Builder.CreateCall(func_value, argsv, "calltmp");
-		// we have to add the values in the argsv in the variableTable in the scope of the function
 	}
 	Type getType(){
 		return type;
@@ -749,8 +751,11 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
-		if(ret_val != nullptr)
-			return ret_val->compile();
+		if (llvm::Value *RetVal = ret_val->compile()) {
+			// Finish off the function.
+			Builder.CreateRet(RetVal);
+			return RetVal;
+		}
 		else return nullptr;
 	}
 private:
@@ -928,6 +933,9 @@ public:
 	pair<Type, int> getType() {
 		return make_pair(type, idl->size());
 	}
+	vector<const char*>* getIds(){
+		return idl;
+	}
 private:
 	Type type;
 	vector<const char*>* idl;
@@ -974,6 +982,7 @@ public:
 					if (!((e->type == type) & (e->params == params))) error("Mismatch in function definition");
 			}	// check if the parameters and the type are the same
 		}
+		// TODO: check that main is void and with no arguments
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
 
@@ -982,31 +991,54 @@ public:
  				f->sem();
 	}
 	virtual llvm::Value* compile() const override {
-		llvm::Type *element_type;
-		switch (type.p) {
-			case TYPE_int: element_type = i32;
-			case TYPE_bool: element_type = i1;
-			case TYPE_char: element_type = i8;
-			default: break;
-		}
-		string name = string(id);
-		// array and list type?
-		// vector<llvm::Type*> params;
-		vector<Type> params;
-		for(Formal *f: *fl) {
-			pair<Type, int> pair_type = f->getType();
-			params.insert(params.end(), pair_type.second, pair_type.first);
-		}
-		// TODO:
-		// llvm::FunctionType *FT =
-    // 	llvm::FunctionType::get(element_type, params, false);
-		llvm::FunctionType *FT =
-    	llvm::FunctionType::get(element_type, i8, false);
+		if (!vt.EmptyScopes()){
+			llvm::Type *func_type;
+			switch (type.p) {
+				case TYPE_int: func_type = i32;
+				case TYPE_bool: func_type = i1;
+				case TYPE_char: func_type = i8;
+				default: break;
+			}
+			string func_name = string(id);
+			vector<llvm::Type*> params;
+			for(Formal *f: *fl) {
+				pair<Type, int> pair_type = f->getType();
+				llvm::Type *llvm_pair_type;
+				switch (pair_type.first.p) {
+					case TYPE_int: llvm_pair_type = i32;
+					case TYPE_bool: llvm_pair_type = i1;
+					case TYPE_char: llvm_pair_type = i8;
+					default: break;
+				}
+				// array and list type?
+				params.insert(params.end(), pair_type.second, llvm_pair_type);
+			}
+			llvm::FunctionType *FT =
+	    	llvm::FunctionType::get(func_type, params, false);
 
-		llvm::Function *F =
-		  llvm::Function::Create(FT, llvm::Function::ExternalLinkage, name, TheModule.get());
+			llvm::Function *F =
+			  llvm::Function::Create(FT, llvm::Function::ExternalLinkage, func_name, TheModule.get());
 
+			// Set names for all arguments.
+			vector<string> Args;
+			for(Formal *f: *fl) {
+				vector<const char*>* idl = f->getIds();
+				for(const char* i: *idl) {
+					string name = string(i);
+					Args.push_back(name);
+				}
+			}
+			unsigned Idx = 0;
+			for (auto &Arg : F->args())
+			  Arg.setName(Args[Idx++]);
+
+			vt.insert(func_name, F);
+		}
+		vt.openScope();
 		return nullptr;
+	}
+	string getId() {
+		return string(id);
 	}
 private:
 	const char* id;
@@ -1049,9 +1081,28 @@ public:
     st.closeScope();
 	}
 	virtual llvm::Value* compile() const override {
-		hd->compile();
+		// First, check for an existing function from a previous 'extern' declaration.
+		string func_name = hd->getId();
+		llvm::Function *TheFunction = TheModule->getFunction(func_name);
+		// if the function has not be declared do it!
+		if (!TheFunction)
+		  hd->compile();
+			ValueEntry *e = vt.lookup(func_name);
+			TheFunction = e->func;
+		// else:
+			// TODO: we have to check if the parameters' names are the same!
+		// Create a new basic block to start insertion into.
+		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
+		Builder.SetInsertPoint(BB);
+		// Record the function arguments in the NamedValues map.
+		for (auto &Arg : TheFunction->args())
+			vt.insert(Arg.getName(), &Arg);
 		for(shared_ptr<Def> d: *defl) d->compile();
 		for(shared_ptr<Stmt> s: *stmtl) s->compile();
+		// Validate the generated code, checking for consistency.
+  	verifyFunction(*TheFunction);
+		vt.insert(func_name, TheFunction); //update
+		vt.closeScope();
 		return nullptr;
 	}
 private:
