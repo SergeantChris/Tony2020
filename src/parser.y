@@ -116,8 +116,8 @@ program:
 		cout << *$1 << endl;
 		// std::cout << std::endl;
     cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
-		/* $1->sem(); */
-		$1->llvm_compile_and_dump();
+		$1->sem();
+		/* $1->llvm_compile_and_dump(); */
     delete $1;
 		/* $1->llvm_compile_and_dump(opt_flag); */
 		return 0;
