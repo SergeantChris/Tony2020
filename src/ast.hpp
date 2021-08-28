@@ -383,6 +383,7 @@ public:
 			case(TC_char): return c8(tc.character);
 			case(TC_bool): return c1(tc.boolean);
 			case(TC_nil): return nullptr;
+			case(TC_str): return nullptr;		// because c++ gives warning
 		}
     return nullptr;
 	}
@@ -597,8 +598,7 @@ public:
 		// cout << "INSIDE SEM for DirectAcc" << endl;
 		expr->sem();
 		atom->sem();
-		// atom->firstLayerCompositeTypeCheck("array");
-		// TODO: '@' refers to (array or list or string)
+		// TODO: '@' refers to (array or list or string) because these composite types can be indexed and we can access their elements
 		atom->firstLayerCompositeTypeCheck("@");
 		expr->primTypeCheck(TYPE_int);
 	}
