@@ -11,5 +11,6 @@ def main ():
     return t
   end
 
+  char[] a
   a := reverse("\n!dlrow olleH")
 end
