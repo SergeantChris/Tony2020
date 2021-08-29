@@ -48,7 +48,6 @@ inline PrimitiveType getPrimType(Type t) {
 		case TYPE_int: return TYPE_int;
 		case TYPE_bool: return TYPE_bool;
 		case TYPE_char: return TYPE_char;
-		case TYPE_str: return TYPE_str;
 		case TYPE_null: return TYPE_null;
 		default: break; // it means it is a CompositeType
 	}
@@ -60,7 +59,6 @@ inline bool isPrimitive(Type t) {
 		case TYPE_int: prim_fault = true; break;
 		case TYPE_bool: prim_fault = true; break;
 		case TYPE_char: prim_fault = true; break;
-		case TYPE_str: prim_fault = true; break;
 		case TYPE_null: prim_fault = true; break;
 		default: break; // it means it is a CompositeType
 	}
@@ -71,7 +69,6 @@ inline ostream& operator<<(ostream &out, const PrimitiveType p) {
 		case TYPE_int: out << "int"; return out;
 		case TYPE_bool: out << "bool"; return out;
 		case TYPE_char: out << "char"; return out;
-		case TYPE_str: out << "str"; return out;
 		case TYPE_null: out << "null"; return out;
 		default: out << "PrimitiveType"; break;
 	}
@@ -83,7 +80,6 @@ inline ostream& operator<<(ostream &out, const Type t) {
 		case TYPE_int: out << "int"; return out;
 		case TYPE_bool: out << "bool"; return out;
 		case TYPE_char: out << "char"; return out;
-		case TYPE_str: out << "str"; return out;
 		case TYPE_null: out << "null"; return out;
 		default: break;
 	}
@@ -92,13 +88,15 @@ inline ostream& operator<<(ostream &out, const Type t) {
 }
 inline bool operator==(const Type &t1, const Type &t2) {
 	bool res1, res2, comp1 = false, comp2 = false;
-	// TODO: not totally sure if correct...check if TYPE_null is also used in any type checking between 2 Type objects (probably not)
+	// TODO: not totally sure if correct
+	//...check if TYPE_null is also used in any type checking between 2 Type objects (probably not)
+	// it is, when a # b and b is List(TYPE_null)
+	// TYPE_null should probably match every type
 	if(t1.p == TYPE_null || t2.p == TYPE_null) return true;
 	switch(t1.p) {
 		case TYPE_int: res1 = (t2.p == TYPE_int ? true : false); break;
 		case TYPE_bool: res1 = (t2.p == TYPE_bool ? true : false); break;
 		case TYPE_char: res1 = (t2.p == TYPE_char ? true : false); break;
-		case TYPE_str: res1 = (t2.p == TYPE_str ? true : false); break;
 		case TYPE_null: res1 = (t2.p == TYPE_null ? true : false); break;
 		default: comp1 = true; break; // it means it is a CompositeType
 	}
@@ -106,7 +104,6 @@ inline bool operator==(const Type &t1, const Type &t2) {
 		case TYPE_int: res2 = (t1.p == TYPE_int ? true : false); break;
 		case TYPE_bool: res2 = (t1.p == TYPE_bool ? true : false); break;
 		case TYPE_char: res2 = (t1.p == TYPE_char ? true : false); break;
-		case TYPE_str: res2 = (t1.p == TYPE_str ? true : false); break;
 		case TYPE_null: res2 = (t1.p == TYPE_null ? true : false); break;
 		default: comp2 = true; break; // it means it is a CompositeType
 	}
@@ -237,7 +234,6 @@ class Const: public virtual Expr {
 public:
 	Const(int i)		 			{ tc.integer = i; tc_act = TC_int; }
 	Const(char c) 				{ tc.character = c; tc_act = TC_char; }
-	// Const(const char* s)  { tc.str = s; tc_act = TC_str; }
 	Const(string v, bool special=1) { // for boolean types and nil + string literals
 		if(special == 1) {
 			if(v == "true") {
@@ -269,22 +265,21 @@ public:
 		}
 	}
 	virtual void sem() override {
-			// cout << "INSIDE SEM for Const" << endl;
+			Type new_type;
 			switch(tc_act) {
 				case(TC_int): type.p = TYPE_int; break;
 				case(TC_char): type.p = TYPE_char; break;
-				case(TC_str): type.p = TYPE_str; break;
+				case(TC_str): new_type.p = TYPE_char; type.c = new Array(new_type); break;
 				case(TC_bool): type.p = TYPE_bool; break;
-				case(TC_nil): Type t; t.p = TYPE_null; type.c = new List(t); break;
+				case(TC_nil): new_type.p = TYPE_null; type.c = new List(new_type); break;
 			}
 	}
 private:
 	union TC {
 		int integer;
 		char character;
-		const char* str; //cannot be string
+		const char* str;
 		bool boolean;
-		// std::vector<int> list; ; //weird list thing for nil TODO: dont know if correct but gives error
 	};
 	TC tc;
 	enum TC_active { TC_int, TC_char, TC_str, TC_bool, TC_nil };

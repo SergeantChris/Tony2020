@@ -9,7 +9,7 @@
 
 using namespace std;
 
-enum PrimitiveType { TYPE_int, TYPE_bool, TYPE_char, TYPE_str, TYPE_null};
+enum PrimitiveType { TYPE_int, TYPE_bool, TYPE_char, TYPE_null};
 
 class CompositeType;
 
