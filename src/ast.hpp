@@ -13,6 +13,7 @@ using namespace std;
 
 #define PRE_DEBUG 1
 
+
 class CompositeType { //abstract class
 public:
 	virtual ~CompositeType() {}
@@ -33,6 +34,10 @@ public:
 		id = "array";
 		type = t;
 	}
+	Array(PrimitiveType p) {
+		id = "array";
+		type.p = p;
+	}
 };
 
 class List: public CompositeType {
@@ -41,38 +46,22 @@ public:
 		id = "list";
 		type = t;
 	}
+	List(PrimitiveType p) {
+		id = "list";
+		type.p = p;
+	}
 };
 
-inline PrimitiveType getPrimType(Type t) {
-	switch(t.p) {
-		case TYPE_int: return TYPE_int;
-		case TYPE_bool: return TYPE_bool;
-		case TYPE_char: return TYPE_char;
-		case TYPE_null: return TYPE_null;
-		default: break; // it means it is a CompositeType
-	}
-	return getPrimType((t.c)->getType());
-}
 inline bool isPrimitive(Type t) {
-	bool prim_fault = false;
+	bool is_prim = false;
 	switch(t.p) {
-		case TYPE_int: prim_fault = true; break;
-		case TYPE_bool: prim_fault = true; break;
-		case TYPE_char: prim_fault = true; break;
-		case TYPE_null: prim_fault = true; break;
+		case TYPE_int: is_prim = true; break;
+		case TYPE_bool: is_prim = true; break;
+		case TYPE_char: is_prim = true; break;
+		case TYPE_null: is_prim = true; break;
 		default: break; // it means it is a CompositeType
 	}
-	return prim_fault;
-}
-inline ostream& operator<<(ostream &out, const PrimitiveType p) {
-	switch(p) {
-		case TYPE_int: out << "int"; return out;
-		case TYPE_bool: out << "bool"; return out;
-		case TYPE_char: out << "char"; return out;
-		case TYPE_null: out << "null"; return out;
-		default: out << "PrimitiveType"; break;
-	}
-	return out;
+	return is_prim;
 }
 
 inline ostream& operator<<(ostream &out, const Type t) {
@@ -86,30 +75,36 @@ inline ostream& operator<<(ostream &out, const Type t) {
 	out << (t.c)->getId() << "[" << ((t.c)->getType()) << "]";
 	return out;
 }
+
+inline ostream& operator<<(ostream &out, const PrimitiveType p) { // overloading
+	switch(p) {
+		case TYPE_int: out << "int"; return out;
+		case TYPE_bool: out << "bool"; return out;
+		case TYPE_char: out << "char"; return out;
+		case TYPE_null: out << "null"; return out;
+	}
+}
+
 inline bool operator==(const Type &t1, const Type &t2) {
-	bool res1, res2, comp1 = false, comp2 = false;
-	// TODO: not totally sure if correct
+	bool res, comp1 = false, comp2 = false;
 	//...check if TYPE_null is also used in any type checking between 2 Type objects (probably not)
 	// it is, when a # b and b is List(TYPE_null)
 	// TYPE_null should probably match every type
 	if(t1.p == TYPE_null || t2.p == TYPE_null) return true;
-	switch(t1.p) {
-		case TYPE_int: res1 = (t2.p == TYPE_int ? true : false); break;
-		case TYPE_bool: res1 = (t2.p == TYPE_bool ? true : false); break;
-		case TYPE_char: res1 = (t2.p == TYPE_char ? true : false); break;
-		case TYPE_null: res1 = (t2.p == TYPE_null ? true : false); break;
-		default: comp1 = true; break; // it means it is a CompositeType
+	comp1 = !isPrimitive(t1);
+	comp2 = !isPrimitive(t2);
+	if(!comp1 && !comp2) {
+		switch(t1.p) {
+			case TYPE_int: res = (t2.p == TYPE_int ? true : false); break;
+			case TYPE_bool: res = (t2.p == TYPE_bool ? true : false); break;
+			case TYPE_char: res = (t2.p == TYPE_char ? true : false); break;
+			case TYPE_null: res = (t2.p == TYPE_null ? true : false); break;
+		}
+		if(res) return true;
 	}
-	switch(t2.p) {
-		case TYPE_int: res2 = (t1.p == TYPE_int ? true : false); break;
-		case TYPE_bool: res2 = (t1.p == TYPE_bool ? true : false); break;
-		case TYPE_char: res2 = (t1.p == TYPE_char ? true : false); break;
-		case TYPE_null: res2 = (t1.p == TYPE_null ? true : false); break;
-		default: comp2 = true; break; // it means it is a CompositeType
-	}
-	if(res1 && res2) return true;
-	if(comp1 && comp2)
+	else if(comp1 && comp2) {
 		if((t1.c)->getId() == (t2.c)->getId() && ((t1.c)->getType() == (t2.c)->getType())) return true;
+	}
 	return false;
 }
 
@@ -129,24 +124,7 @@ class Expr: public ASTnode { //abstract class
 public:
 	virtual ~Expr() {}
 	// TODO: there is a problem here...it never reaches the override function inside const when the caller is not const i.e. Op
-	void primTypeCheck(PrimitiveType t) {
-		#if PRE_DEBUG
-		cout << "-- TYPE CHECK  (" << t << ")";
-		#endif
-		if(type.p != t) {
-			cout << endl;
-			ostringstream formatted;
-			formatted << "Type mismatch, expected type: " << t << ", but type: " << type << " was used";
-			error(formatted.str());
-			// error("Type mismatch, expected type: %s but type: %s was used", "this", "that");
-			// cout << "Type mismatch, expected type: " << t << ", but type: " << type << " was used" << endl;
-		}
-		#if PRE_DEBUG
-		else {
-			cout << "  ---> ok" << endl;
-		}
-		#endif
-	}
+
 	void typeCheck(Type t) {
 		#if PRE_DEBUG
 		cout << "-- TYPE CHECK  ("<< type << ", " << t << ")";
@@ -163,26 +141,31 @@ public:
 		}
 		#endif
 	}
-	void firstLayerCompositeTypeCheck(string s) {
+
+	void typeCheck(PrimitiveType p) { // overloading
+		Type t;
+		t.p = p;
+		typeCheck(t);
+	}
+
+	void typeCheck(CompositeType* c) { // overloading
+		Type t;
+		t.c = c;
+		typeCheck(t);
+	}
+
+	void typeCheck(CompositeType* c1, CompositeType* c2) { // overloading for union
+		Type t1;
+		t1.c = c1;
+		Type t2;
+		t2.c = c2;
 		#if PRE_DEBUG
-		cout << "-- First Layer Composite TYPE CHECK (" << s << ")";
+		cout << "-- TYPE CHECK  ("<< type << ", " << t1 << " OR " << t2 << ")";
 		#endif
-		if(isPrimitive(type)) {
+		if(!(type == t1) && !(type == t2)){
 			cout << endl;
 			ostringstream formatted;
-			formatted << "Type mismatch, expected outer type to be: " << s << ", but the given type is Primitive of type: " << type;
-			error(formatted.str());
-		}
-		else if(s == "@" && !((type.c)->getId() == "array" || (type.c)->getId() == "list" || (type.c)->getId() == "string")) {
-			cout << endl;
-			ostringstream formatted;
-			formatted << "Type mismatch, expected type: array or list or string, but type: " << type.c->getId() << " was used";
-			error(formatted.str());
-		}
-		else if((type.c)->getId() != s) {
-			cout << endl;
-			ostringstream formatted;
-			formatted << "Type mismatch, expected type: " << s << ", but type: " << type.c->getId() << " was used";
+			formatted << "Type " << type << "unsubscriptable";
 			error(formatted.str());
 		}
 		#if PRE_DEBUG
@@ -191,41 +174,11 @@ public:
 		}
 		#endif
 	}
-	void nestedCompositeyTpeCheck(Type t, string s) {
-		#if PRE_DEBUG
-		cout << "-- nested Composite TYPE CHECK (" << type << ", " << t << ")";
-		#endif
-		if(isPrimitive(type)) {
-			cout << endl;
-			ostringstream formatted;
-			formatted << "Type mismatch, expected outer type to be: " << s << " , but the given type is Primitive of type: " << type;			
-			error(formatted.str());
-		}
-		else if(!((type.c)->getType() == t)) {
-			cout << endl;
-			ostringstream formatted;
-			formatted << "Type mismatch, expected type: " << (type.c)->getType() << ", but type: " << t << " was used";			
-			error(formatted.str());
-		}
-		#if PRE_DEBUG
-		else {
-			cout << "  ---> ok" << endl;
-		}
-		#endif
-	}
+	
 	Type getType() {
 		return type;
 	}
-	Type getNestedType() {
-		if(isPrimitive(type)) {
-			ostringstream formatted;
-			formatted << "Type mismatch, trying to acces nested type, but it doesent exist... type is Primitive: " << type << endl;
-			formatted << "Returning the type as is...";
-			error(formatted.str());
-			return type; // why is this here, error exits...
-		}
-		else return (type.c)->getType();
-	}
+
 protected:
   Type type;
 };
@@ -265,13 +218,12 @@ public:
 		}
 	}
 	virtual void sem() override {
-			Type new_type;
 			switch(tc_act) {
 				case(TC_int): type.p = TYPE_int; break;
 				case(TC_char): type.p = TYPE_char; break;
-				case(TC_str): new_type.p = TYPE_char; type.c = new Array(new_type); break;
+				case(TC_str): type.c = new Array(TYPE_char); break;
 				case(TC_bool): type.p = TYPE_bool; break;
-				case(TC_nil): new_type.p = TYPE_null; type.c = new List(new_type); break;
+				case(TC_nil): type.c = new List(TYPE_null); break;
 			}
 	}
 private:
@@ -296,22 +248,22 @@ public:
 	virtual void sem() override {
 		// cout << "INSIDE SEM for PreOp" << endl;
 		expr->sem();
-			if(op == "+" || op == "-") {
-				expr->primTypeCheck(TYPE_int);
-				type.p = TYPE_int;
-			}
-			else if(op == "not") {
-				expr->primTypeCheck(TYPE_bool);
-				type.p = TYPE_bool;
-			}
-			else if(op == "nil?") {
-				expr->firstLayerCompositeTypeCheck("list");
-				type.p = TYPE_bool;
-			}
-			else if(op == "head" || op == "tail" ) {
-				expr->firstLayerCompositeTypeCheck("list");
-				type = expr->getNestedType();
-			}
+		if(op == "+" || op == "-") {
+			expr->typeCheck(TYPE_int);
+			type.p = TYPE_int;
+		}
+		else if(op == "not") {
+			expr->typeCheck(TYPE_bool);
+			type.p = TYPE_bool;
+		}
+		else if(op == "nil?") {
+			expr->typeCheck(new List(TYPE_null));
+			type.p = TYPE_bool;
+		}
+		else if(op == "head" || op == "tail" ) {
+			expr->typeCheck(new List(TYPE_null));
+			type = ((expr->getType()).c)->getType();
+		}
 	}
 private:
 	string op;
@@ -330,23 +282,21 @@ public:
 		expr1->sem();
 		expr2->sem();
 		if(op == "and" || op == "or") {
-			expr1->primTypeCheck(TYPE_bool);
-			expr2->primTypeCheck(TYPE_bool);
+			expr1->typeCheck(TYPE_bool);
+			expr2->typeCheck(TYPE_bool);
 			type.p = TYPE_bool;
 		}
 		else if(op == "#") { // expr1->t, expr2->list[t]
-			expr2->firstLayerCompositeTypeCheck("list");
-			expr2->nestedCompositeyTpeCheck(expr1->getType(), "list");
+			expr2->typeCheck(new List(expr1->getType()));
 			type = expr2->getType();
 		}
 		else if(op == "=" || op == "<>" || op == "<" || op == ">" || op == "<=" || op == ">=") {
-			Type expr1_type = expr1->getType();
-			expr2->primTypeCheck(expr1_type.p);
+			expr2->typeCheck(expr1->getType());
 			type.p = TYPE_bool;
 		}
 		else if(op == "+" || op == "-" || op == "*" || op == "/" || op == "mod") {
-			expr1->primTypeCheck(TYPE_int);
-			expr2->primTypeCheck(TYPE_int);
+			expr1->typeCheck(TYPE_int);
+			expr2->typeCheck(TYPE_int);
 			type.p = TYPE_int;
 		}
 	}
@@ -366,7 +316,7 @@ public:
 	virtual void sem() {
 		// cout << "INSIDE SEM for MemoryAlloc" << endl;
 		expr->sem();
-		expr->primTypeCheck(TYPE_int);
+		expr->typeCheck(TYPE_int);
 
 		Type final_type;
 		final_type.c = new Array(new_type);
@@ -428,10 +378,9 @@ public:
 		// cout << "INSIDE SEM for DirectAcc" << endl;
 		expr->sem();
 		atom->sem();
-		// atom->firstLayerCompositeTypeCheck("array");
-		// TODO: '@' refers to (array or list or string)
-		atom->firstLayerCompositeTypeCheck("@");
-		expr->primTypeCheck(TYPE_int);
+		atom->typeCheck(new Array(TYPE_null), new List(TYPE_null));
+		expr->typeCheck(TYPE_int);
+		type = ((atom->getType()).c)->getType();
 	}
 private:
 	Atom* atom;
@@ -471,8 +420,13 @@ public:
 		expr->sem();
 		atom->sem();
 		expr->typeCheck(atom->getType());
-		// TODO: we also have to check what atom is...
-		// for example it cant be string or call??
+
+		// acceptable: atom is id[index], where id is array/list of same type as expr
+		// if i dont check that id is defined in this scope, will blow up in the code generation stage
+		// (check is either call return id defined in this scope OR call return id was arg passed by ref)
+
+		// acceptable: atom is string[expr] because of papy comment http://moodle.softlab.ntua.gr/mod/forum/discuss.php?d=9839
+		// -> means that "test"[0]='e' will blow up in the code generation stage
 	}
 private:
 	Atom* atom;
@@ -511,9 +465,10 @@ public:
 			i++;
 		}
 	}
-	Type getType(){
+	Type getType() {
 		return type;
 	}
+
 private:
 	const char* id;
 	vector<shared_ptr<Expr>>* exprList;
@@ -530,6 +485,8 @@ public:
 	virtual void sem() {
 		// cout << "INSIDE SEM for Return Value" << endl;
 		// TODO: initially we need to check if the function has return type
+
+		// CAN I SOMEHOW GET FUNC RETURN ID AS WELL?
 		call->sem();
 		type = call->getType();
 	}
@@ -589,7 +546,7 @@ public:
 	virtual void sem() override {
 		// cout << "INSIDE SEM for Branch" << endl;
 		condition->sem();
-		condition->primTypeCheck(TYPE_bool);
+		condition->typeCheck(TYPE_bool);
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
 		if(elsif_branches != nullptr) {
 			for(Branch *b: *elsif_branches) b->sem();
@@ -633,7 +590,7 @@ public:
 	virtual void sem() override {
 		// cout << "INSIDE SEM for Loop" << endl;
 		condition->sem();
-		condition->primTypeCheck(TYPE_bool);
+		condition->typeCheck(TYPE_bool);
 		for(shared_ptr<Simple> s: *inits) 	s->sem();
 		for(shared_ptr<Simple> s: *steps) 	s->sem();
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
@@ -665,7 +622,7 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for Formal" << endl;
+		// IF BY REFERENCE THEN POINT TO OUTER SCOPE VAR!!!
 		for(const char* i: *idl) {
 			// save each var into the SymbolTable in the scope of the function
 			st.insert(string(i), type);
