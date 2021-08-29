@@ -51,17 +51,17 @@ public:
 	}
 };
 
-inline PrimitiveType getPrimType(Type t) {
-	switch(t.p) {
-		case TYPE_int: return TYPE_int;
-		case TYPE_bool: return TYPE_bool;
-		case TYPE_char: return TYPE_char;
-		case TYPE_str: return TYPE_str;
-		case TYPE_null: return TYPE_null;
-		default: break; // it means it is a CompositeType
-	}
-	return getPrimType((t.c)->getType());
-}
+// inline PrimitiveType getPrimType(Type t) {
+// 	switch(t.p) {
+// 		case TYPE_int: return TYPE_int;
+// 		case TYPE_bool: return TYPE_bool;
+// 		case TYPE_char: return TYPE_char;
+// 		case TYPE_str: return TYPE_str;
+// 		case TYPE_null: return TYPE_null;
+// 		default: break; // it means it is a CompositeType
+// 	}
+// 	return getPrimType((t.c)->getType());
+// }
 inline bool isPrimitive(Type t) {
 	bool prim_fault = false;
 	switch(t.p) {
@@ -984,6 +984,7 @@ public:
 			}	// check if the parameters and the type are the same
 		}
 		// TODO: check that main is void and with no arguments
+		// TODO: no need to open (and close) scope when you do a func_decl (func==false)
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
 
@@ -1158,8 +1159,6 @@ public:
 		#endif
 		for(const char* i: *idl){
 			st.insert(string(i), type);
-			// st.insert("a", type);
-			// cout << *st.lookup("a");
 		}
 	}
 	virtual llvm::Value* compile() const override {
@@ -1169,5 +1168,216 @@ private:
 	Type type;
 	vector<const char*>* idl;
 };
+
+
+class Library {
+public:
+  Library(){};
+  void init() {
+    // Formal *formal;
+    // Formal_list *formal_list;
+    // Id_list *id_list;
+
+		Type ret_t;
+		Type var_t;
+		Type varh_t;
+		vector<Type> params;
+		// vector<const char*>* id_list;
+
+		// insert(name, returnType, "func_decl", vector<Type> params)
+		// st.openScope(); cout << "+++ Opening new scope!" << endl;
+		// void puti(int n)
+		var_t.p = TYPE_int;
+		params.push_back(var_t);
+		ret_t.p = TYPE_null;
+		st.insert("puti", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("n", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// void putb(bool b)
+		var_t.p = TYPE_bool;
+		params.push_back(var_t);
+		ret_t.p = TYPE_null;
+		st.insert("putb", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("b", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// void putc(char c)
+		var_t.p = TYPE_char;
+		params.push_back(var_t);
+		ret_t.p = TYPE_null;
+		st.insert("putc", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("c", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// void puts(char[] s)
+		varh_t.p = TYPE_char;
+		var_t.c = new Array(varh_t);
+		params.push_back(var_t);
+		ret_t.p = TYPE_null;
+		st.insert("puts", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("s", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// int geti()
+		ret_t.p = TYPE_int;
+		st.insert("geti", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// bool getb()
+		ret_t.p = TYPE_bool;
+		st.insert("getb", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// char getc()
+		ret_t.p = TYPE_char;
+		st.insert("getc", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// void gets(int n, char[] s)	// n: max character to read from input (including /0), s: the array of chars where you should put the resault
+		var_t.p = TYPE_int;
+		params.push_back(var_t);
+		varh_t.p = TYPE_char;
+		var_t.c = new Array(varh_t);
+		params.push_back(var_t);
+		ret_t.p = TYPE_null;
+		st.insert("gets", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		var_t.p = TYPE_int;
+		st.insert("n", var_t);
+		varh_t.p = TYPE_char;
+		var_t.c = new Array(varh_t);
+		st.insert("s", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// int abs(int n)
+		var_t.p = TYPE_int;
+		params.push_back(var_t);
+		ret_t.p = TYPE_int;
+		st.insert("abs", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("n", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// int ord(char c)
+		var_t.p = TYPE_char;
+		params.push_back(var_t);
+		ret_t.p = TYPE_int;
+		st.insert("ord", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("c", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// char chr(int n)
+		var_t.p = TYPE_int;
+		params.push_back(var_t);
+		ret_t.p = TYPE_char;
+		st.insert("chr", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("n", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// int strlen(char[] s)
+		varh_t.p = TYPE_char;
+		var_t.c = new Array(varh_t);
+		params.push_back(var_t);
+		ret_t.p = TYPE_int;
+		st.insert("strlen", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("s", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// int strcmp(char[] s1, s2)
+		varh_t.p = TYPE_char;
+		var_t.c = new Array(varh_t);
+		params.push_back(var_t);
+		params.push_back(var_t);
+		ret_t.p = TYPE_int;
+		st.insert("strcmp", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("s1", var_t);
+		st.insert("s2", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// void strcpy(char[] trg, src)
+		varh_t.p = TYPE_char;
+		var_t.c = new Array(varh_t);
+		params.push_back(var_t);
+		params.push_back(var_t);
+		ret_t.p = TYPE_int;
+		st.insert("strcpy", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("trg", var_t);
+		st.insert("src", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+		// void strcat(char[] trg, src)
+		varh_t.p = TYPE_char;
+		var_t.c = new Array(varh_t);
+		params.push_back(var_t);
+		params.push_back(var_t);
+		ret_t.p = TYPE_int;
+		st.insert("strcat", ret_t, "func_decl", params);
+
+		st.openScope(); cout << "+++ Opening new scope!" << endl;
+		st.insert("trg", var_t);
+		st.insert("src", var_t);
+		st.closeScope(); cout << "--- Closing scope!" << endl;
+		params.clear();
+
+/*	// The same but with the use of formal instead of vector<Type>
+
+    //procedure readString (size : integer; var s : array of char);
+    formal_list = new Formal_list();
+    id_list = new Id_list();
+    id_list->append_idString("s");
+
+    formal = new Formal(id_list, new Integer(), false);
+    formal_list->append_formal(formal);
+    id_list = new Id_list();
+    id_list->append_idString("size");
+    formal = new Formal(id_list, new Array(new Char()), true);
+    formal_list->append_formal(formal);
+    st.insertProcedureLib("readString", new ProcedureType(), formal_list);
+
+*/
+  }
+};
+
 
 #endif

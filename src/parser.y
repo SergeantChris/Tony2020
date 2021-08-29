@@ -114,12 +114,21 @@ program:
 	func_def  {
 		cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
 		cout << *$1 << endl;
-		// std::cout << std::endl;
     cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
+		st.openScope();
+		Library *l = new Library();
+		l->init(); // Initialize all built in functions and procedures
+		st.closeScope();
+
 		$1->sem();
-		/* $1->llvm_compile_and_dump(); */
-    delete $1;
+
+		/* st.closeScope(); */
+		st.openScope();
+
 		/* $1->llvm_compile_and_dump(opt_flag); */
+		delete $1;
+
+		st.closeScope();
 		return 0;
 	}
 ;

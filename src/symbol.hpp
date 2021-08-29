@@ -73,6 +73,7 @@ public:
 			if (locals.find(c) != locals.end()) error("Duplicate name: %s found in a function and a variable", c);
 			cout << "Inserting Fun: " << c << " into funcs" << endl;
 			funcs[c] = SymbolEntry(t, offset++, def, v);
+
 			// cout << locals.find(c)->second;
 			// cout << " id: " << c << endl;
 			++size;
