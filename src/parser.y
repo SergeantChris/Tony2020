@@ -112,14 +112,15 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 
 program:
 	func_def  {
-		cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
+		/* cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
 		cout << *$1 << endl;
 		// std::cout << std::endl;
-    cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
-		$1->sem();
-		/* $1->llvm_compile_and_dump(); */
-    delete $1;
-		/* $1->llvm_compile_and_dump(opt_flag); */
+    cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl; */
+		/* $1->sem(); */
+		/* $1->llvm_compile_and_dump();
+    delete $1; */
+		$1->llvm_compile_and_dump(opt_flag);
+		vt.openScope();
 		return 0;
 	}
 ;
@@ -245,8 +246,8 @@ atom:
 
 expr:
 	atom 														{ $$ = $1; }
-| T_constInt											{ cout << "T_constInt " << $1 << endl; $$ = new Const($1); }
-| T_constChar											{ cout << "T_constChar" << endl; $$ = new Const($1); }
+| T_constInt											{ $$ = new Const($1); }
+| T_constChar											{ $$ = new Const($1); }
 | '(' expr ')'										{ $$ = $2; }
 | '+' expr %prec PLUS_SIGN				{ $$ = new PreOp("+", $2); }
 | '-' expr %prec MINUS_SIGN				{ $$ = new PreOp("-", $2); }
@@ -304,6 +305,6 @@ int main(int argc, char* argv[]) {
   }
   yyin = f;
   int result = yyparse();
-  if (result == 0) printf("Success.\n");
+  /* if (result == 0) printf("Success.\n"); */
   return result;
 }

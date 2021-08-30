@@ -130,7 +130,6 @@ public:
 	virtual void printNode(ostream &out) const = 0;
 	virtual void sem() {}
 	virtual llvm::Value* compile() const = 0;
-
 	void llvm_compile_and_dump(bool optimize=true) {  // later used for compiler optimization flag
     // Initialize
     TheModule = llvm::make_unique<llvm::Module>("tony program", TheContext);
@@ -152,36 +151,11 @@ public:
     i32 = llvm::IntegerType::get(TheContext, 32);
     // i64 = llvm::IntegerType::get(TheContext, 64);
 
-    // Initialize Global Variavles
-    // llvm::ArrayType *vars_type = llvm::ArrayType::get(i32, 26);
-    // TheVars = new llvm::GlobalVariable(
-    //   *TheModule, vars_type, false, llvm::GlobalVariable::PrivateLinkage,
-    //   llvm::ConstantAggregateZero::get(vars_type), "vars");
-    // TheVars->setAlignment(16);
-    // llvm::ArrayType *nl_type = llvm::ArrayType::get(i8, 2);
-    // TheNL = new llvm::GlobalVariable(
-    //   *TheModule, nl_type, true, llvm::GlobalVariable::PrivateLinkage,
-    //   llvm::ConstantArray::get(nl_type, {c8('\n'), c8('\0')}), "nl");
-    // TheNL->setAlignment(1);
-
-    // Initialize Library Functions
-    // llvm::FunctionType *writeInteger_type =
-    //   llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i64}, false);
-    // TheWriteInteger =
-    // llvm::Function::Create(writeInteger_type, llvm::Function::ExternalLinkage,
-    // "writeInteger", TheModule.get());
-    // llvm::FunctionType *writeString_type =
-    //   llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext),
-    //                     {llvm::PointerType::get(i8, 0)}, false);
-    // TheWriteString =
-    // llvm::Function::Create(writeString_type, llvm::Function::ExternalLinkage,
-    // "writeString", TheModule.get());
-
     // Define and start the main Function
 		// maybe define the main after reading the arguments or change the name
     llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
     llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,
-                                									"main", TheModule.get());
+                                									"_main", TheModule.get());
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
     Builder.SetInsertPoint(BB);
 
@@ -190,18 +164,16 @@ public:
     Builder.CreateRet(c32(0));
 
     // Verify the IR
-    bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
-    if(bad) {
-      std::cerr << "the IR is BAD!" << std::endl; // make it with color so call error function
-      TheModule->print(llvm::outs(), nullptr);
-      std::exit(1);
-    }
+    // bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
+    // if(bad) {
+    //   std::cerr << "the IR is BAD!" << std::endl; // make it with color so call error function
+    //   std::exit(1);
+    // }
     // Optimize
     TheFPM->run(*main);
 
-    // print
+    // print out IR
     TheModule->print(llvm::outs(), nullptr);
-
   }
 protected:
   static llvm::LLVMContext TheContext;
@@ -214,16 +186,10 @@ protected:
 	// and what their LLVM representation is
 	// the only values that can be in the NamedValues map are function arguments.
 
-  // static llvm::GlobalVariable *TheVars;
-  // static llvm::GlobalVariable *TheNL;
-	//
-  // static llvm::Function *TheWriteInteger;
-  // static llvm::Function *TheWriteString;
-
 	static llvm::Type *i1;
   static llvm::Type *i8;
   static llvm::Type *i32;
-  static llvm::Type *i64;
+  // static llvm::Type *i64;
 
   static llvm::ConstantInt* c32(int n) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(32, n, true));
@@ -517,22 +483,27 @@ public:
 		type = final_type;
 	}
 	virtual llvm::Value* compile() const override {
-		llvm::Type *element_type;
+		llvm::Type *array_type;
 		llvm::Value *v = expr->compile(); // size of array
 		llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
 		uint64_t size = ci->llvm::ConstantInt::getZExtValue();
 		// initialize a array of type new_type and size expr
 		switch (new_type.p) {
-			case TYPE_int: element_type = i32;
-			case TYPE_bool: element_type = i1;
-			case TYPE_char: element_type = i8;
+			case TYPE_int: array_type = i32;
+			case TYPE_bool: array_type = i1;
+			case TYPE_char: array_type = i8;
 			default: break;
 		}
-
-		// if (new_type.c->getId() == "array") element_type = //array;
+		//
+		// if (new_type.c->getId() == "array"){
+		// 	Type element_type = new_type.c->getType();
+		// 	array_type = llvm::ArrayType::get(element_type, size);;
+		// }
 		// else element_type = list;
 
-		llvm::ArrayType *array = llvm::ArrayType::get(element_type, size);
+		// llvm::ArrayType *array = llvm::ArrayType::get(array_type, size);
+		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array_type, v, "tmparray");
+		ArrayAlloc->setAlignment(16);
 		return nullptr;
 	}
 private:
@@ -765,7 +736,7 @@ private:
 class Branch: public Stmt {
 public:
 	Branch(vector<shared_ptr<Stmt>>* ct,
-		Expr* c = new Const("true"),
+		Expr* c = new Const(string("true")),
 		vector<Branch*>* eif = nullptr,
 		Branch* e = nullptr): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
 	~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
@@ -788,8 +759,9 @@ public:
 		out << ")";
 	}
 	virtual void sem() override {
-		// cout << "INSIDE SEM for Branch" << endl;
+		cout << "INSIDE SEM for Branch" << endl;
 		condition->sem();
+		cout << condition->getType() << endl;
 		condition->primTypeCheck(TYPE_bool);
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
 		if(elsif_branches != nullptr) {
@@ -859,7 +831,7 @@ public:
 	}
 
 	virtual void sem() override {
-		// cout << "INSIDE SEM for Loop" << endl;
+		cout << "INSIDE SEM for Loop" << endl;
 		condition->sem();
 		condition->primTypeCheck(TYPE_bool);
 		for(shared_ptr<Simple> s: *inits) 	s->sem();
@@ -967,11 +939,12 @@ public:
 		if (!st.EmptyScopes()){
 			cout << "Looking up for declaration of the function... ";
 			SymbolEntry *e = st.lookup(id, "func_decl");
-			vector<Type> params;
-			for(Formal *f: *fl) {
-				pair<Type, int> pair_type = f->getType();
-				params.insert(params.end(), pair_type.second, pair_type.first);
-			}
+			vector<Type> params = {};
+			if (fl)
+				for(Formal *f: *fl) {
+					pair<Type, int> pair_type = f->getType();
+					params.insert(params.end(), pair_type.second, pair_type.first);
+				}
 			if (e == nullptr) {
 				if(func) st.insert(string(id), type, "func_def", params);
 				else st.insert(string(id), type, "func_decl", params);
@@ -992,16 +965,18 @@ public:
  				f->sem();
 	}
 	virtual llvm::Value* compile() const override {
-		if (!vt.EmptyScopes()){
-			llvm::Type *func_type;
-			switch (type.p) {
-				case TYPE_int: func_type = i32;
-				case TYPE_bool: func_type = i1;
-				case TYPE_char: func_type = i8;
-				default: break;
-			}
-			string func_name = string(id);
-			vector<llvm::Type*> params;
+		if(vt.EmptyScopes())
+			vt.openScope();
+		llvm::Type *func_type;
+		switch (type.p) {
+			case TYPE_int: func_type = i32;
+			case TYPE_bool: func_type = i1;
+			case TYPE_char: func_type = i8;
+			default: func_type = llvm::Type::getVoidTy(TheContext);
+		}
+		string func_name = string(id);
+		vector<llvm::Type*> params = {};
+		if (fl)
 			for(Formal *f: *fl) {
 				pair<Type, int> pair_type = f->getType();
 				llvm::Type *llvm_pair_type;
@@ -1014,14 +989,15 @@ public:
 				// array and list type?
 				params.insert(params.end(), pair_type.second, llvm_pair_type);
 			}
-			llvm::FunctionType *FT =
-	    	llvm::FunctionType::get(func_type, params, false);
+		llvm::FunctionType *FT =
+    	llvm::FunctionType::get(func_type, params, false);
 
-			llvm::Function *F =
-			  llvm::Function::Create(FT, llvm::Function::ExternalLinkage, func_name, TheModule.get());
+		llvm::Function *F =
+		  llvm::Function::Create(FT, llvm::Function::ExternalLinkage, func_name, TheModule.get());
 
-			// Set names for all arguments.
-			vector<string> Args;
+		// Set names for all arguments.
+		vector<string> Args = {};
+		if (fl)
 			for(Formal *f: *fl) {
 				vector<const char*>* idl = f->getIds();
 				for(const char* i: *idl) {
@@ -1029,12 +1005,11 @@ public:
 					Args.push_back(name);
 				}
 			}
-			unsigned Idx = 0;
-			for (auto &Arg : F->args())
-			  Arg.setName(Args[Idx++]);
+		unsigned Idx = 0;
+		for (auto &Arg : F->args())
+		  Arg.setName(Args[Idx++]);
 
-			vt.insert(func_name, F);
-		}
+		vt.insert(func_name, F);
 		vt.openScope();
 		return nullptr;
 	}
@@ -1096,14 +1071,14 @@ public:
 		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
 		Builder.SetInsertPoint(BB);
 		// Record the function arguments in the NamedValues map.
-		for (auto &Arg : TheFunction->args())
-			vt.insert(Arg.getName(), &Arg);
-		for(shared_ptr<Def> d: *defl) d->compile();
-		for(shared_ptr<Stmt> s: *stmtl) s->compile();
-		// Validate the generated code, checking for consistency.
-  	verifyFunction(*TheFunction);
-		vt.insert(func_name, TheFunction); //update
-		vt.closeScope();
+		// for (auto &Arg : TheFunction->args())
+		// 	vt.insert(Arg.getName(), &Arg);
+		// for(shared_ptr<Def> d: *defl) d->compile();
+		// for(shared_ptr<Stmt> s: *stmtl) s->compile();
+		// // Validate the generated code, checking for consistency.
+  	// verifyFunction(*TheFunction);
+		// vt.insert(func_name, TheFunction); //update
+		// vt.closeScope();
 		return nullptr;
 	}
 private:
