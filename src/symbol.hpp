@@ -3,7 +3,7 @@
 
 #include "error.hpp"
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <sstream>
 #include "ast.hpp"
 
@@ -73,6 +73,7 @@ public:
 			if (locals.find(c) != locals.end()) error("Duplicate id: %s", c);
 			cout << "Inserting Fun: " << c << " into funcs" << endl;
 			funcs[c] = SymbolEntry(t, offset++, def, v);
+			last_func = funcs[c];
 			// cout << locals.find(c)->second;
 			// cout << " id: " << c << endl;
 			++size;
@@ -82,11 +83,12 @@ public:
   int getSize() const { return size; }
   int getOffset() const { return offset; }
 	Type getLastFuncType() const {
-		return (funcs.rbegin()->second).type;
+		return last_func.type;
 	}
 private:
-	map<string, SymbolEntry> locals;
-  map<string, SymbolEntry> funcs;
+	unordered_map<string, SymbolEntry> locals;
+  unordered_map<string, SymbolEntry> funcs;
+  SymbolEntry last_func;
   int offset;
   int size;
 };
