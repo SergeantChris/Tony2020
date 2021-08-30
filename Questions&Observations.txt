@@ -1,0 +1,39 @@
+
+
+	------------------------- Questions & Observations -------------------------
+
+	* replace paramas (vector<Type>) with vector<Formal*>* and incorporate
+		that also to the symbol table -> in this way you avoid inserting the
+		parameters of the function manually (not a big problem), but most
+		importantly with the variable type you also save the name, so you can
+		better define the check for the parameters (name and type)
+
+	* with the above way you also open the func scope inside the loop in the
+		symbol table insert function (the closeScope() must always be done after
+		the hd->sem(), because you may want to add more stuff inside the scope,
+		like in func_def)
+
+	* no need to open and close scopes in func decl
+		NOT SURE, because in the case of the library functions we need the scope
+		so that the semantics work fine
+
+	* if i open and close scope in the parser and do the sem() inside i get a
+		seg fault (see commented code in parser.y where we call sem())
+		and the same happens if i dont open and close a scope (after i added the Code
+		for the library functions)
+		However it seems to work fine if i open a scope, declare all the Library
+		functions and then close the scope. Then do the sem(), and after i dont know if we
+		need to open/close another scope and put inside the llvm_compile_and_dump()
+
+	* about the TYPE_str and Array(TYPE_char) we have to deside on one of them,
+		because now the firstLayerCompositeTypeCheck(@) gives an error because TYPE_str
+		is considered Primitive and has to be composite to pass the type checks
+		( and it makes more sense to be composite)... On the other hand, i dont know
+		what TYPE_str should be and if it must exist
+
+	* also right now the library functions are recognized inside sem() but we get an
+		error when for example trying to execute "puts("Ciao\n")". The error is that
+		the semantics is trying to find "Ciao\n" as if it was a variable... and after
+		we have seg fault (which i think is normal). So we have to find a way to pass
+		directly integers, characters, strings and bools as function parameters, without having
+		a problem in the semantics/

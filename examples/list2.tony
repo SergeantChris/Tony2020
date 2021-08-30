@@ -4,6 +4,7 @@ def main ():
   char[] marilena
   int i
   list[int] l
+	bool b
 
   def list[int] qsort (char q; int a):
     int seed
@@ -21,5 +22,9 @@ def main ():
   %"cute"[0] := 'x'
   l := qsort(seed, i)
   i := l[1]
-
+%	b := true
+%	puti(1)
+%	putc('c')
+%	putb(b)
+%	puts("Ciao\n")
 end
