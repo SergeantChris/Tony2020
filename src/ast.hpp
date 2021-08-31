@@ -8,6 +8,7 @@
 #include <string>
 #include "lexer.hpp"
 #include "symbol.hpp"
+#include "type.hpp"
 
 using namespace std;
 
@@ -262,6 +263,8 @@ public:
 	virtual void sem();
 	vector<Formal*>* getOpenedFormal();
 	Type getType();
+	vector<const char*>* getIds();
+	bool getCb();
 private:
 	Type type;
 	vector<const char*>* idl;

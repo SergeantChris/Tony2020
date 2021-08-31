@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <string.h>
 #include "lexer.hpp"
 #include "symbol.hpp"
 #include "ast.hpp"
@@ -71,12 +72,13 @@ ostream& operator<<(ostream &out, const Type t) {
 
 ostream& operator<<(ostream &out, const PrimitiveType p) { // overloading
 	switch(p) {
-		case TYPE_int: out << "int"; return out;
-		case TYPE_bool: out << "bool"; return out;
-		case TYPE_char: out << "char"; return out;
-		case TYPE_nil: out << "nil"; return out;
-		case TYPE_void: out << "void"; return out;
+		case TYPE_int: out << "int";
+		case TYPE_bool: out << "bool";
+		case TYPE_char: out << "char";
+		case TYPE_nil: out << "nil";
+		case TYPE_void: out << "void";
 	}
+	return out;
 }
 
 bool operator==(const Type &t1, const Type &t2) {
@@ -102,7 +104,7 @@ bool operator==(const Type &t1, const Type &t2) {
 
 
 ASTnode::~ASTnode() {}
-ASTnode::sem() {}
+void ASTnode::sem() {}
 
 
 ostream& operator<<(ostream &out, const ASTnode &n) {
@@ -170,7 +172,7 @@ Type Expr::getType() {
 
 Const::Const(int i)		 			{ tc.integer = i; tc_act = TC_int; }
 Const::Const(char c) 				{ tc.character = c; tc_act = TC_char; }
-Const::Const(string v, bool special=1) { // for boolean types and nil + string literals
+Const::Const(string v, bool special) { // for boolean types and nil + string literals
 	if(special == 1) {
 		if(v == "true") {
 			tc.boolean = true;
@@ -358,7 +360,7 @@ void Assign::sem() {
 }
 
 
-Call::Call(const char* i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprList(e) {}
+Call::Call(const char* i, vector<shared_ptr<Expr>>* e): id(i), exprList(e) {}
 Call::~Call() { delete id; delete exprList; }
 void Call::printNode(ostream &out) const {
 	out << "Call(" << id;
@@ -417,7 +419,7 @@ void ReturnValue::sem() {
 }
 
 
-Return::Return(Expr* v = nullptr): ret_val(v) {}
+Return::Return(Expr* v): ret_val(v) {}
 Return::~Return() { delete ret_val; }
 void Return::printNode(ostream &out) const {
 	out << "Return(";
@@ -433,10 +435,7 @@ void Return::sem() {
 }
 
 
-Branch::Branch(vector<shared_ptr<Stmt>>* ct,
-		Expr* c = new Const("true"),
-		vector<Branch*>* eif = nullptr,
-		Branch* e = nullptr): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
+Branch::Branch(vector<shared_ptr<Stmt>>* ct, Expr* c, vector<Branch*>* eif, Branch* e): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
 Branch::~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
 void Branch::printNode(ostream &out) const {
 	out << "Branch(";
@@ -467,10 +466,7 @@ void Branch::sem() {
 }
 
 
-Loop::Loop(vector<shared_ptr<Simple>>* i,
-	Expr* c,
-	vector<shared_ptr<Simple>>* s,
-	vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct) {}
+Loop::Loop(vector<shared_ptr<Simple>>* i,	Expr* c, vector<shared_ptr<Simple>>* s,	vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct) {}
 Loop::~Loop() { delete inits; delete condition; delete steps; delete cond_true; }
 void Loop::printNode(ostream &out) const {
 	out << "Loop(";
@@ -524,16 +520,24 @@ void Formal::sem() {
 }
 vector<Formal*>* Formal::getOpenedFormal() {
 	vector<Formal*>* opened = new vector<Formal*>;
-	for(long unsigned int i=0; i<idl->size(); i++) {
-		string ref;
-		ref = (call_by_reference ? "ref" : "val");
-		opened->push_back(new Formal(type, idl, ref));
+	string ref = (call_by_reference ? "ref" : "val");
+	for(const char* id: *idl) {
+		vector<const char*>* idl_self = new vector<const char*>;
+		idl_self->push_back(id);
+		opened->push_back(new Formal(type, idl_self, ref));
 	}
 	return opened;
 }
 Type Formal::getType() {
 	return type;
 }
+vector<const char*>* Formal::getIds() {
+	return idl;
+}
+bool Formal::getCb() {
+	return call_by_reference;
+}
+
 
 
 Header::Header(const char* i, vector< Formal*>* f, Type t): id(i), fl(f) {
@@ -552,7 +556,7 @@ void Header::printNode(ostream &out) const {
 	}
 	out << ")";
 }
-void Header::sem(bool func = true) {
+void Header::sem(bool func) {
 	if (!st.EmptyScopes()){
 		cout << "Looking up for declaration of the function... ";
 		SymbolEntry *e = st.lookup(id, "func_decl");
@@ -576,7 +580,27 @@ void Header::sem(bool func = true) {
 			string def = e->from;
 			if (def == "func_def") error("Duplicate function definition");
 			else {
-				if (!((e->type == type) & (e->params == params))) error("Mismatch in function definition"); //prob not correct == check
+				if (!(e->type == type)) error("Mismatch in function definition"); 
+				vector<Formal*>* decl_params = e->params;
+				int i=0;
+				for(Formal* f_def: *params) {
+					Formal* f_decl = decl_params->at(i);
+					ostringstream formatted;
+					if(!(f_def->getType() == f_decl->getType())) {
+						formatted << "Mismatch in arg type at position " << i;
+						error(formatted.str());
+					}
+					if(strcmp(f_def->getIds()->at(0), f_decl->getIds()->at(0))) {
+						formatted << "Mismatch in arg id at position " << i;
+						error(formatted.str());
+					}
+					if(f_def->getCb() != f_decl->getCb()) {
+						formatted << "Mismatch in arg call by method at position " << i;
+						error(formatted.str());
+					}
+					i++;
+				}
+					
 			} // check if the parameters and the type are the same
 		}
 	}

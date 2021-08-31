@@ -6,22 +6,11 @@
 #include <unordered_map>
 #include <sstream>
 #include "ast.hpp"
+#include "type.hpp"
+
 
 using namespace std;
 
-
-enum PrimitiveType { TYPE_int, TYPE_bool, TYPE_char, TYPE_nil, TYPE_void};
-
-class CompositeType;
-
-union Type {
-	PrimitiveType p;
-	CompositeType* c;
-	//~Type() {}
-	//i dont think ill ever put a primtype in a comptype variable
-	//if i want to keep the destructor i'll have to make type a pointer
-	//in bison union
-};
 
 class Formal;
 
@@ -34,9 +23,9 @@ struct SymbolEntry {
   SymbolEntry(Type t, int ofs, string fr = "var", vector<Formal*>* v = nullptr);
 };
 
-inline ostream& operator<<(ostream &out, const Type t); //fwd declaration?
+ostream& operator<<(ostream &out, const Type t); //fwd declaration?
 
-inline ostream& operator<<(ostream &out, const SymbolEntry e);
+ostream& operator<<(ostream &out, const SymbolEntry e);
 
 class Scope {
 public:

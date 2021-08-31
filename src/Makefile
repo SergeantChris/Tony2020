@@ -1,7 +1,7 @@
 .PHONY: clean distclean default
 
 CXX=c++
-CXXFLAGS=-std=c++11 -g -rdynamic #-Wall 
+CXXFLAGS=-std=c++11 -Wall 
 
 default: tony
 

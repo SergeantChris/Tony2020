@@ -10,16 +10,16 @@ using namespace std;
 
 SymbolEntry::SymbolEntry() {}
 
-SymbolEntry::SymbolEntry(Type t, int ofs, string fr = "var", vector<Formal*>* v = nullptr): type(t), offset(ofs), from(fr), params(v) {} // inits for var
+SymbolEntry::SymbolEntry(Type t, int ofs, string fr, vector<Formal*>* v): type(t), offset(ofs), from(fr), params(v) {} // inits for var
 
 
-inline ostream& operator<<(ostream &out, const SymbolEntry e) {
+ostream& operator<<(ostream &out, const SymbolEntry e) {
 	out << "-/-/ SymbolEntry /-/- " << endl << " offset: " << e.offset << endl << " type: " <<  e.type << endl;
 	return out;
 }
 
 
-Scope::Scope(int ofs = -1): locals(), offset(ofs), size(0) {}
+Scope::Scope(int ofs): locals(), offset(ofs), size(0) {}
 
 SymbolEntry* Scope::lookup(string c, string def) {
 	if (def == "var"){
@@ -66,7 +66,7 @@ void SymbolTable::openScope() {
 void SymbolTable::closeScope() {
   scopes.pop_back();
 }
-SymbolEntry* SymbolTable::lookup(string c, string def = "var") {
+SymbolEntry* SymbolTable::lookup(string c, string def) {
   for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
 		cout << "scope with size: " << i->getSize() << " and offset: " << i->getOffset() << endl;
 		SymbolEntry *e = i->lookup(c, def);
@@ -80,7 +80,7 @@ SymbolEntry* SymbolTable::lookup(string c, string def = "var") {
   }
   return nullptr;
 }
-void SymbolTable::insert(string c, Type t, string def = "var", vector<Formal*>* v = nullptr) {
+void SymbolTable::insert(string c, Type t, string def, vector<Formal*>* v) {
   scopes.back().insert(c, t, def, v);
 }
 int SymbolTable::getSizeOfCurrentScope() const {
