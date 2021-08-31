@@ -87,9 +87,6 @@ inline ostream& operator<<(ostream &out, const PrimitiveType p) { // overloading
 
 inline bool operator==(const Type &t1, const Type &t2) {
 	bool res, comp1 = false, comp2 = false;
-	//...check if TYPE_null is also used in any type checking between 2 Type objects (probably not)
-	// it is, when a # b and b is List(TYPE_null)
-	// TYPE_null should probably match every type
 	if(t1.p == TYPE_null || t2.p == TYPE_null) return true;
 	comp1 = !isPrimitive(t1);
 	comp2 = !isPrimitive(t2);
@@ -214,7 +211,7 @@ public:
 			case(TC_char): out << tc.character << ")"; break;
 			case(TC_str): out << tc.str << ")"; break;
 			case(TC_bool): out << (tc.boolean ? "true" : "false") << ")"; break;
-			case(TC_nil): out << "List[...nil]" << ")"; break;
+			case(TC_nil): out << "nil_list" << ")"; break;
 		}
 	}
 	virtual void sem() override {
@@ -246,7 +243,6 @@ public:
 		out << "PreOp(" << op << ", " << *expr << ")";
 	}
 	virtual void sem() override {
-		// cout << "INSIDE SEM for PreOp" << endl;
 		expr->sem();
 		if(op == "+" || op == "-") {
 			expr->typeCheck(TYPE_int);
@@ -278,7 +274,6 @@ public:
 		out << "Op(" << *expr1 << ", " << op << ", " << *expr2 << ")";
 	}
 	virtual void sem() override {
-		// cout << "INSIDE SEM for Op" << endl;
 		expr1->sem();
 		expr2->sem();
 		if(op == "and" || op == "or") {
@@ -288,7 +283,7 @@ public:
 		}
 		else if(op == "#") { // expr1->t, expr2->list[t]
 			expr2->typeCheck(new List(expr1->getType()));
-			type = expr2->getType();
+			type.c = new List(expr1->getType()); // because expr2->getType might still be null list
 		}
 		else if(op == "=" || op == "<>" || op == "<" || op == ">" || op == "<=" || op == ">=") {
 			expr2->typeCheck(expr1->getType());
@@ -314,7 +309,6 @@ public:
 		out << "MemoryAlloc(" << type << ", " << *expr << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for MemoryAlloc" << endl;
 		expr->sem();
 		expr->typeCheck(TYPE_int);
 
@@ -344,7 +338,6 @@ public:
 		return id;
 	}
 	virtual void sem() override {
-		// cout << "INSIDE SEM for Id" << endl;
 		cout << "Searching for: " << id << " ... ";
 		SymbolEntry *e = st.lookup(string(id));
 		if(e != nullptr) {
@@ -375,7 +368,6 @@ public:
 		out << "DirectAcc(" << *atom << ", " << *expr << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for DirectAcc" << endl;
 		expr->sem();
 		atom->sem();
 		atom->typeCheck(new Array(TYPE_null), new List(TYPE_null));
@@ -415,8 +407,6 @@ public:
 		out << "Assign(" << *atom << ", " << *expr << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for Assign" << endl;
-
 		expr->sem();
 		atom->sem();
 		expr->typeCheck(atom->getType());
@@ -438,31 +428,29 @@ public:
 	Call(const char* i, Type t, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprList(e), type(t){}
 	~Call() { delete id; delete exprList; }
 	virtual void printNode(ostream &out) const override {
-		out << "Call(" << id << ", ";
-		bool first = true;
-		for(shared_ptr<Expr> e: *exprList) {
-			if(!first) out << ", ";
-			first = false;
-			out << *e;
+		out << "Call(" << id;
+		if(exprList != nullptr) {
+			for(shared_ptr<Expr> e: *exprList) {
+				out << ", ";
+				out << *e;
+			}
 		}
 		out << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for Call" << endl;
-		// we have to check if the function's arguments are the same type as the exprList (one by one)
-		// so we have to look for the ids in the st
-		// and also for the funcion itself (return type...)... not sure if true??
-
 		// check if the function is defined
 		SymbolEntry *func = st.lookup(string(id), "func_def");
 		vector<Type> params = func->params;
 		type = func->type;
 
-		int i = 0;
-		for(shared_ptr<Expr> e: *exprList) {
-			e->sem();
-			e->typeCheck(params.at(i));
-			i++;
+		if(exprList != nullptr) {
+			// we have to check if the function's arguments are the same type as the exprList (one by one)
+			int i = 0;
+			for(shared_ptr<Expr> e: *exprList) {
+				e->sem();
+				e->typeCheck(params.at(i));
+				i++;
+			}
 		}
 	}
 	Type getType() {
@@ -483,11 +471,13 @@ public:
 		out << "ReturnValue(" << *call << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for Return Value" << endl;
-		// TODO: initially we need to check if the function has return type
-
-		// CAN I SOMEHOW GET FUNC RETURN ID AS WELL?
+		// CAN I SOMEHOW GET FUNC RETURN ID AS WELL? see assign comment
 		call->sem();
+		if(call->getType().p == TYPE_null) {
+			ostringstream formatted;
+			formatted << *call << " does not return a type";
+			error(formatted.str());
+		}
 		type = call->getType();
 	}
 
@@ -661,9 +651,11 @@ public:
 			cout << "Looking up for declaration of the function... ";
 			SymbolEntry *e = st.lookup(id, "func_decl");
 			vector<Type> params;
-			for(Formal *f: *fl) {
-				pair<Type, int> pair_type = f->getType();
-				params.insert(params.end(), pair_type.second, pair_type.first);
+			if(fl != nullptr) {
+				for(Formal *f: *fl) {
+					pair<Type, int> pair_type = f->getType();
+					params.insert(params.end(), pair_type.second, pair_type.first);
+				}
 			}
 			if (e == nullptr) {
 				if(func) st.insert(string(id), type, "func_def", params);
