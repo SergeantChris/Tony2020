@@ -224,5 +224,5 @@ private:
 };
 
 extern ValueTable vt;
-
+extern bool retval;
 #endif

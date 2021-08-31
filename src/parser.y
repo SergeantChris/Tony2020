@@ -14,6 +14,7 @@ using namespace std;
 
 SymbolTable st;
 ValueTable vt;
+bool retval;
 
 int linecount = 1;
 int opt_flag=0, lco_flag=0, ico_flag=0;
@@ -113,10 +114,10 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 program:
 	func_def  {
 		/* cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
-		cout << *$1 << endl;
-    cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
+		cout << *$1 << endl; */
+    /* cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
 		st.openScope();
-		/* Library *l = new Library();
+		Library *l = new Library();
 		l->init(); // Initialize all built in functions and procedures
 		st.closeScope();
 

@@ -4,8 +4,11 @@ def simple ():
 
     if n < 0:
       return prime?(-n)
+    elsif n < 2:
+      return false
+    else:
+      return false
     end
-    return true
   end
 
   int limit, number, counter

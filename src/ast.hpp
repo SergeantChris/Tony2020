@@ -160,6 +160,7 @@ public:
     Builder.SetInsertPoint(BB);
 
     // Emit the program code
+		retval = false;
     compile();
 		Builder.GetInsertBlock()->eraseFromParent();
     // Verify the IR
@@ -736,6 +737,7 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
+		retval = true;
 		if (llvm::Value *RetVal = ret_val->compile()) {
 			// Finish off the function.
 				Builder.CreateRet(RetVal);
@@ -778,13 +780,12 @@ public:
 		cout << condition->getType() << endl;
 		condition->primTypeCheck(TYPE_bool);
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
-		if(elsif_branches != nullptr) {
+		if(!((*elsif_branches).empty())) {
 			for(Branch *b: *elsif_branches) b->sem();
 		}
 		if(else_branch != nullptr) else_branch->sem();
 	}
 	virtual llvm::Value* compile() const override {
-		cout << *condition << endl;
 		llvm::Value *v = condition->compile();
 		// cout << v->getType();
 		llvm::Value *cond = Builder.CreateICmpNE(v, c1(0), "if_cond");
@@ -798,18 +799,36 @@ public:
 		llvm::BasicBlock *AfterBB =
       llvm::BasicBlock::Create(TheContext, "endif", TheFunction);
 
-		Builder.CreateCondBr(cond, ThenBB, IfElseBB);
+		if(elsif_branches != nullptr && !(elsif_branches->empty()))
+			Builder.CreateCondBr(cond, ThenBB, IfElseBB);
+		else if(else_branch != nullptr){
+			IfElseBB->eraseFromParent();
+			Builder.CreateCondBr(cond, ThenBB, ElseBB);
+		}
+		else {
+			IfElseBB->eraseFromParent();
+			ElseBB->eraseFromParent();
+			// TODO: problem when we are inside an ifelse branch
+			Builder.CreateCondBr(cond, ThenBB, AfterBB);
+		}
 		Builder.SetInsertPoint(ThenBB);
 		for(shared_ptr<Stmt> s: *cond_true) s->compile();
-		Builder.CreateBr(AfterBB);
-		Builder.SetInsertPoint(IfElseBB);
-		if(elsif_branches != nullptr)
+		if (!retval) Builder.CreateBr(AfterBB);
+		else retval = false;
+		if(elsif_branches != nullptr) {
+			Builder.SetInsertPoint(IfElseBB);
 			for(Branch *b: *elsif_branches) b->compile();
-		Builder.CreateBr(AfterBB);
-    Builder.SetInsertPoint(ElseBB);
-		if(else_branch != nullptr) else_branch->compile();
-		Builder.CreateBr(AfterBB);
+			if (!retval) Builder.CreateBr(AfterBB);
+			else retval = false;
+		}
+		if(else_branch != nullptr){
+	    Builder.SetInsertPoint(ElseBB);
+			if(else_branch != nullptr) else_branch->compile();
+			if (!retval) Builder.CreateBr(AfterBB);
+		}
     Builder.SetInsertPoint(AfterBB);
+		// TODO: problem when there is no other body in the afterBB afterwards
+		retval = false;
 		return nullptr;
 	}
 private:
@@ -917,16 +936,6 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		// TODO: call by ref how?
-		// llvm::Type *vtype;
-		// if (pair_type.first.p == TYPE_int) vtype = i32;
-		// else if (pair_type.first.p == TYPE_bool) vtype = i1;
-		// else if (pair_type.first.p == TYPE_char) vtype = i8;
-		// for(const char* i: *idl) {
-		// 	string name = string(i);
-		// 	llvm::AllocaInst *alloc = CreateAlloca(vtype, nullptr, name)
-		// 	alloc->setAlignment(4);
-		// 	vt.insert(name, alloc);
-		// }
 		return nullptr;
 	}
 	pair<Type, int> getType() {
