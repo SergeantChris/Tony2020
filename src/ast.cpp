@@ -578,7 +578,8 @@ void Header::sem(bool func) {
 		}
 		else {
 			string def = e->from;
-			if (def == "func_def") error("Duplicate function definition");
+			if ((def == "func_def") && func) error("Duplicate function definition");
+			if ((def == "func_decl") && !func) error("Duplicate function declaration");
 			else {
 				if (!(e->type == type)) error("Mismatch in function definition"); 
 				vector<Formal*>* decl_params = e->params;
@@ -600,7 +601,6 @@ void Header::sem(bool func) {
 					}
 					i++;
 				}
-					
 			} // check if the parameters and the type are the same
 		}
 	}
