@@ -58,7 +58,8 @@ inline bool isPrimitive(Type t) {
 		case TYPE_int: is_prim = true; break;
 		case TYPE_bool: is_prim = true; break;
 		case TYPE_char: is_prim = true; break;
-		case TYPE_null: is_prim = true; break;
+		case TYPE_nil: is_prim = true; break;
+		case TYPE_void: is_prim = true; break;
 		default: break; // it means it is a CompositeType
 	}
 	return is_prim;
@@ -69,7 +70,8 @@ inline ostream& operator<<(ostream &out, const Type t) {
 		case TYPE_int: out << "int"; return out;
 		case TYPE_bool: out << "bool"; return out;
 		case TYPE_char: out << "char"; return out;
-		case TYPE_null: out << "null"; return out;
+		case TYPE_nil: out << "nil"; return out;
+		case TYPE_void: out << "void"; return out;
 		default: break;
 	}
 	out << (t.c)->getId() << "[" << ((t.c)->getType()) << "]";
@@ -81,13 +83,14 @@ inline ostream& operator<<(ostream &out, const PrimitiveType p) { // overloading
 		case TYPE_int: out << "int"; return out;
 		case TYPE_bool: out << "bool"; return out;
 		case TYPE_char: out << "char"; return out;
-		case TYPE_null: out << "null"; return out;
+		case TYPE_nil: out << "nil"; return out;
+		case TYPE_void: out << "void"; return out;
 	}
 }
 
 inline bool operator==(const Type &t1, const Type &t2) {
 	bool res, comp1 = false, comp2 = false;
-	if(t1.p == TYPE_null || t2.p == TYPE_null) return true;
+	if(t1.p == TYPE_nil || t2.p == TYPE_nil) return true; // nil is for always matching, void is for not
 	comp1 = !isPrimitive(t1);
 	comp2 = !isPrimitive(t2);
 	if(!comp1 && !comp2) {
@@ -95,7 +98,8 @@ inline bool operator==(const Type &t1, const Type &t2) {
 			case TYPE_int: res = (t2.p == TYPE_int ? true : false); break;
 			case TYPE_bool: res = (t2.p == TYPE_bool ? true : false); break;
 			case TYPE_char: res = (t2.p == TYPE_char ? true : false); break;
-			case TYPE_null: res = (t2.p == TYPE_null ? true : false); break;
+			case TYPE_nil: res = (t2.p == TYPE_nil ? true : false); break;
+			case TYPE_void: res = (t2.p == TYPE_void ? true : false); break; // ret=true will never happen
 		}
 		if(res) return true;
 	}
@@ -220,7 +224,7 @@ public:
 				case(TC_char): type.p = TYPE_char; break;
 				case(TC_str): type.c = new Array(TYPE_char); break;
 				case(TC_bool): type.p = TYPE_bool; break;
-				case(TC_nil): type.c = new List(TYPE_null); break;
+				case(TC_nil): type.c = new List(TYPE_nil); break;
 			}
 	}
 private:
@@ -253,11 +257,11 @@ public:
 			type.p = TYPE_bool;
 		}
 		else if(op == "nil?") {
-			expr->typeCheck(new List(TYPE_null));
+			expr->typeCheck(new List(TYPE_nil));
 			type.p = TYPE_bool;
 		}
 		else if(op == "head" || op == "tail" ) {
-			expr->typeCheck(new List(TYPE_null));
+			expr->typeCheck(new List(TYPE_nil));
 			type = ((expr->getType()).c)->getType();
 		}
 	}
@@ -344,9 +348,9 @@ public:
 			cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
 			type = e->type;
 		}
-		else {
+		else { // WUT THE FUCK IS HAPPENING HERE
 			Type t;
-			t.p = TYPE_null;
+			t.p = TYPE_nil;
 			type = t;
 		}
 	}
@@ -370,7 +374,7 @@ public:
 	virtual void sem() {
 		expr->sem();
 		atom->sem();
-		atom->typeCheck(new Array(TYPE_null), new List(TYPE_null));
+		atom->typeCheck(new Array(TYPE_nil), new List(TYPE_nil));
 		expr->typeCheck(TYPE_int);
 		type = ((atom->getType()).c)->getType();
 	}
@@ -425,7 +429,7 @@ private:
 
 class Call: public Simple {
 public:
-	Call(const char* i, Type t, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprList(e), type(t){}
+	Call(const char* i, vector<shared_ptr<Expr>>* e = nullptr): id(i), exprList(e) {}
 	~Call() { delete id; delete exprList; }
 	virtual void printNode(ostream &out) const override {
 		out << "Call(" << id;
@@ -473,11 +477,6 @@ public:
 	virtual void sem() {
 		// CAN I SOMEHOW GET FUNC RETURN ID AS WELL? see assign comment
 		call->sem();
-		if(call->getType().p == TYPE_null) {
-			ostringstream formatted;
-			formatted << *call << " does not return a type";
-			error(formatted.str());
-		}
 		type = call->getType();
 	}
 
@@ -495,11 +494,8 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for Return" << endl;
-		// we have to typecheck to see if the return type is the same as the type of the function
 		if(ret_val != nullptr) {
 			ret_val->sem();
-			// cout << ret_val->getType() << endl;
 			cout << "Checking return type ..." << endl;
 			ret_val->typeCheck(st.getReturnType());
 		}
@@ -636,7 +632,7 @@ public:
 	~Header() { delete id; delete fl; }
 	virtual void printNode(ostream &out) const override {
 		out << "Header(" << id;
-		if(type.p != TYPE_null) out << ", " << type;
+		if(type.p != TYPE_void) out << ", " << type;
 		if(fl != nullptr) {
 			for(Formal *f: *fl) {
 				out << ", ";
