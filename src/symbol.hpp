@@ -6,6 +6,7 @@
 #include <map>
 #include "ast.hpp"
 #include <llvm/IR/Value.h>
+#include <llvm/IR/Instructions.h>
 
 using namespace std;
 
@@ -131,10 +132,14 @@ extern SymbolTable st;
 struct ValueEntry {
 	llvm::Value *val;
 	llvm::Function *func;
+	llvm::AllocaInst *alloc;
   int offset;
   ValueEntry() {}
   ValueEntry(llvm::Value *v, int ofs) : val(v), offset(ofs) {}
 	ValueEntry(llvm::Function *f, int ofs) : func(f), offset(ofs) {}
+	ValueEntry(llvm::AllocaInst *a, int ofs) : alloc(a), offset(ofs) {
+		val = nullptr;
+	}
 };
 
 class CompileScope {
@@ -162,6 +167,16 @@ public:
 		}
 		else {
 			defined[c] = ValueEntry(f, offset++);
+	    ++size;
+		}
+  }
+	void insert(string c, llvm::AllocaInst *a) {
+		if (defined.find(c) != defined.end()) {
+				int ofst = defined[c].offset;
+				defined[c] = ValueEntry(a, ofst);
+		}
+		else {
+			defined[c] = ValueEntry(a, offset++);
 	    ++size;
 		}
   }
@@ -194,6 +209,9 @@ public:
   }
 	void insert(string c, llvm::Function *f) {
     scopes.back().insert(c, f);
+  }
+	void insert(string c, llvm::AllocaInst *a) {
+    scopes.back().insert(c, a);
   }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();

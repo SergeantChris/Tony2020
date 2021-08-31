@@ -155,16 +155,15 @@ public:
 		// maybe define the main after reading the arguments or change the name
     llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
     llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,
-                                									"_main", TheModule.get());
-    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
+                                									"main", TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "program_entry", main);
     Builder.SetInsertPoint(BB);
 
     // Emit the program code
     compile();
-    Builder.CreateRet(c32(0));
-
+		Builder.GetInsertBlock()->eraseFromParent();
     // Verify the IR
-    // bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
+    bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
     // if(bad) {
     //   std::cerr << "the IR is BAD!" << std::endl; // make it with color so call error function
     //   std::exit(1);
@@ -489,9 +488,9 @@ public:
 		uint64_t size = ci->llvm::ConstantInt::getZExtValue();
 		// initialize a array of type new_type and size expr
 		switch (new_type.p) {
-			case TYPE_int: array_type = i32;
-			case TYPE_bool: array_type = i1;
-			case TYPE_char: array_type = i8;
+			case TYPE_int: array_type = i32; break;
+			case TYPE_bool: array_type = i1; break;
+			case TYPE_char: array_type = i8; break;
 			default: break;
 		}
 		//
@@ -515,6 +514,7 @@ class Atom: virtual public Expr { //abstract class
 public:
 	virtual ~Atom() {}
 	virtual const char* getId() {return "";}
+	virtual llvm::AllocaInst* compile_alloc() const = 0;
 };
 
 class Id: public Atom {
@@ -545,7 +545,13 @@ public:
 		string var  = id;
 		ValueEntry *e = vt.lookup(var);
 		llvm::Value *v = e->val;
-    return Builder.CreateLoad(v, var);
+    // return Builder.CreateLoad(i32, v, var);
+		return v;
+	}
+	virtual llvm::AllocaInst* compile_alloc() const override {
+		string var  = id;
+		ValueEntry *e = vt.lookup(var);
+    return e->alloc;
 	}
 private:
 	const char* id;
@@ -555,7 +561,9 @@ class String: public Atom, public Const {
 public:
 	String(const char* s): Const(s) {}
 	~String() {}
-
+	virtual llvm::AllocaInst* compile_alloc() const override {
+		return nullptr;
+	}
 };
 
 class DirectAcc: public Atom {
@@ -578,6 +586,9 @@ public:
 		llvm::Value *vatom = atom->compile();
 		// Value *v = Builder.CreateGEP(TheVars, {c32(0), vexpr)}, name);
 		// return Builder.CreateLoad(v, name);
+		return nullptr;
+	}
+	virtual llvm::AllocaInst* compile_alloc() const override {
 		return nullptr;
 	}
 private:
@@ -613,7 +624,7 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		llvm::Value *rhs = expr->compile();
-		llvm::Value *lhs = atom->compile();
+		llvm::Value *lhs = atom->compile_alloc();
 		Builder.CreateStore(rhs, lhs);
 		string name = string(atom->getId());
 		vt.insert(name, lhs);
@@ -699,6 +710,9 @@ public:
 	virtual llvm::Value* compile() const override {
 		return call->compile();
 	}
+	virtual llvm::AllocaInst* compile_alloc() const override {
+		return nullptr;
+	}
 private:
 	Call* call;
 };
@@ -724,10 +738,10 @@ public:
 	virtual llvm::Value* compile() const override {
 		if (llvm::Value *RetVal = ret_val->compile()) {
 			// Finish off the function.
-			Builder.CreateRet(RetVal);
+				Builder.CreateRet(RetVal);
 			return RetVal;
 		}
-		else return nullptr;
+		else return Builder.CreateRetVoid();
 	}
 private:
 	Expr* ret_val;
@@ -770,8 +784,10 @@ public:
 		if(else_branch != nullptr) else_branch->sem();
 	}
 	virtual llvm::Value* compile() const override {
+		cout << *condition << endl;
 		llvm::Value *v = condition->compile();
-		llvm::Value *cond = Builder.CreateICmpNE(v, c32(0), "if_cond");
+		// cout << v->getType();
+		llvm::Value *cond = Builder.CreateICmpNE(v, c1(0), "if_cond");
 		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *ThenBB =
       llvm::BasicBlock::Create(TheContext, "then", TheFunction);
@@ -901,6 +917,16 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		// TODO: call by ref how?
+		// llvm::Type *vtype;
+		// if (pair_type.first.p == TYPE_int) vtype = i32;
+		// else if (pair_type.first.p == TYPE_bool) vtype = i1;
+		// else if (pair_type.first.p == TYPE_char) vtype = i8;
+		// for(const char* i: *idl) {
+		// 	string name = string(i);
+		// 	llvm::AllocaInst *alloc = CreateAlloca(vtype, nullptr, name)
+		// 	alloc->setAlignment(4);
+		// 	vt.insert(name, alloc);
+		// }
 		return nullptr;
 	}
 	pair<Type, int> getType() {
@@ -966,27 +992,28 @@ public:
  				f->sem();
 	}
 	virtual llvm::Value* compile() const override {
-		if(vt.EmptyScopes())
+		return compile(nullptr);
+	}
+	virtual llvm::Value* compile(llvm::BasicBlock* EndFunc) const {
+		bool main = false;
+		if(vt.EmptyScopes()){
 			vt.openScope();
-		llvm::Type *func_type;
-		switch (type.p) {
-			case TYPE_int: func_type = i32;
-			case TYPE_bool: func_type = i1;
-			case TYPE_char: func_type = i8;
-			default: func_type = llvm::Type::getVoidTy(TheContext);
+			main = true;
 		}
+		llvm::Type *func_type;
+		if (type.p == TYPE_int) func_type = i32;
+		else if (type.p == TYPE_bool) func_type = i1;
+		else if (type.p == TYPE_char) func_type = i8;
+		else func_type = llvm::Type::getVoidTy(TheContext);
 		string func_name = string(id);
 		vector<llvm::Type*> params = {};
 		if (fl)
 			for(Formal *f: *fl) {
 				pair<Type, int> pair_type = f->getType();
 				llvm::Type *llvm_pair_type;
-				switch (pair_type.first.p) {
-					case TYPE_int: llvm_pair_type = i32;
-					case TYPE_bool: llvm_pair_type = i1;
-					case TYPE_char: llvm_pair_type = i8;
-					default: break;
-				}
+				if (pair_type.first.p == TYPE_int) llvm_pair_type = i32;
+				else if (pair_type.first.p == TYPE_bool) llvm_pair_type = i1;
+				else if (pair_type.first.p == TYPE_char) llvm_pair_type = i8;
 				// array and list type?
 				params.insert(params.end(), pair_type.second, llvm_pair_type);
 			}
@@ -996,6 +1023,10 @@ public:
 		llvm::Function *F =
 		  llvm::Function::Create(FT, llvm::Function::ExternalLinkage, func_name, TheModule.get());
 
+		if (main){
+			 Builder.CreateCall(F, {});
+			 Builder.CreateRet(c32(0));
+		}
 		// Set names for all arguments.
 		vector<string> Args = {};
 		if (fl)
@@ -1012,10 +1043,16 @@ public:
 
 		vt.insert(func_name, F);
 		vt.openScope();
+		llvm::BasicBlock *CurrentBB = Builder.GetInsertBlock();
+		if (!main & CurrentBB->empty()) CurrentBB->eraseFromParent();
+		else if (!main) Builder.CreateBr(EndFunc);
 		return nullptr;
 	}
 	string getId() {
 		return string(id);
+	}
+	bool isVoid() {
+		return type.p == TYPE_null;
 	}
 private:
 	const char* id;
@@ -1060,10 +1097,13 @@ public:
 	virtual llvm::Value* compile() const override {
 		// First, check for an existing function from a previous 'extern' declaration.
 		string func_name = hd->getId();
+		llvm::Function *ParentFunc = Builder.GetInsertBlock()->getParent();
+		llvm::BasicBlock *EndFunc =
+      llvm::BasicBlock::Create(TheContext, "continue", ParentFunc);
 		llvm::Function *TheFunction = TheModule->getFunction(func_name);
 		// if the function has not be declared do it!
 		if (!TheFunction)
-		  hd->compile();
+		  hd->compile(EndFunc);
 			ValueEntry *e = vt.lookup(func_name);
 			TheFunction = e->func;
 		// else:
@@ -1072,14 +1112,16 @@ public:
 		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
 		Builder.SetInsertPoint(BB);
 		// Record the function arguments in the NamedValues map.
-		// for (auto &Arg : TheFunction->args())
-		// 	vt.insert(Arg.getName(), &Arg);
-		// for(shared_ptr<Def> d: *defl) d->compile();
-		// for(shared_ptr<Stmt> s: *stmtl) s->compile();
-		// // Validate the generated code, checking for consistency.
-  	// verifyFunction(*TheFunction);
-		// vt.insert(func_name, TheFunction); //update
-		// vt.closeScope();
+		for (auto &Arg : TheFunction->args())
+			vt.insert(Arg.getName(), &Arg);
+		for(shared_ptr<Def> d: *defl) d->compile();
+		for(shared_ptr<Stmt> s: *stmtl) s->compile();
+		if (hd->isVoid()) Builder.CreateRetVoid();
+		// Validate the generated code, checking for consistency.
+  	verifyFunction(*TheFunction);
+		vt.insert(func_name, TheFunction); //update
+		vt.closeScope();
+		Builder.SetInsertPoint(EndFunc);
 		return nullptr;
 	}
 private:
@@ -1137,6 +1179,21 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
+		llvm::Type *vtype;
+		if (type.p == TYPE_int)
+			vtype = i32;
+		else if (type.p == TYPE_bool)
+			vtype = i1;
+		else if (type.p == TYPE_char)
+			 vtype = i8;
+		// else continue;
+		for(const char* i: *idl){
+			string name = string(i);
+			llvm::AllocaInst *IdAlloc = Builder.CreateAlloca(vtype, nullptr, name);
+			IdAlloc->setAlignment(4);
+			vt.insert(name, IdAlloc);
+		}
+
 		return nullptr;
 	}
 private:

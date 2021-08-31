@@ -1,16 +1,13 @@
-def int simple ():
-  decl int foo (char e; int a,b; bool i)
-  int b
-  i := not true
-  b0 := -2 * (1 + 5)
-  b := 4 mod 2
-  if i = 1: i := 2 i:=3
-  elsif i = 2: i := 0
-  elsif i = 3: i := 1
-  else:
-    i := 1
-    for number := 6; number <= 10; number := number + 1:
-      i := i + 1
+def simple ():
+  def bool prime? (int n):
+    int i
+
+    if n < 0:
+      return prime?(-n)
     end
+    return true
   end
+
+  int limit, number, counter
+  counter := 0
 end

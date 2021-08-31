@@ -15,4 +15,4 @@ std::unique_ptr<llvm::legacy::FunctionPassManager> ASTnode::TheFPM;
 llvm::Type *ASTnode::i1;
 llvm::Type *ASTnode::i8;
 llvm::Type *ASTnode::i32;
-llvm::Type *ASTnode::i64;
+// llvm::Type *ASTnode::i64;
