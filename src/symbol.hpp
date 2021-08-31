@@ -19,7 +19,7 @@ struct SymbolEntry {
   int offset;
 	string from; // "var" or "func_def" of "func_decl"
 	vector<Formal*>* params; // vector with the the parameters - in func_decl
-  SymbolEntry(); // was this supposed to be destructor
+  SymbolEntry();
   SymbolEntry(Type t, int ofs, string fr = "var", vector<Formal*>* v = nullptr);
 };
 

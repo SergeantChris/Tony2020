@@ -8,7 +8,7 @@
 using namespace std;
 
 
-SymbolEntry::SymbolEntry() {}
+SymbolEntry::SymbolEntry() {} // was this supposed to be destructor
 
 SymbolEntry::SymbolEntry(Type t, int ofs, string fr, vector<Formal*>* v): type(t), offset(ofs), from(fr), params(v) {} // inits for var
 
