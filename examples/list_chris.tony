@@ -1,0 +1,10 @@
+def main():
+	def list[int] wrong(int var):
+		var := var + 1
+		return nil
+	end
+	list[int] mylist
+	mylist := wrong(8)
+	mylist := 2 # mylist
+	mylist := 3 # mylist
+end

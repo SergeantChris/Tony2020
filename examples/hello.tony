@@ -1,5 +1,5 @@
 def hello ():
-  %char[] string
-  %string := "test"
+  char[] string
+  string := "test"
   puts("Hello world!\n")
 end

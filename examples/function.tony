@@ -1,0 +1,11 @@
+def main():
+	decl myfunc(int a, b; bool c)
+	decl myfunc(int a, b; bool c)
+	def dummy():
+		myfunc(3, 8, true)
+	end
+	def myfunc(int a, k; bool c):
+		skip
+	end
+	dummy()
+end
