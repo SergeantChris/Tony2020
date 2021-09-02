@@ -149,7 +149,7 @@ public:
 		i1 = llvm::IntegerType::get(TheContext, 1);
     i8 = llvm::IntegerType::get(TheContext, 8);
     i32 = llvm::IntegerType::get(TheContext, 32);
-    // i64 = llvm::IntegerType::get(TheContext, 64);
+    i64 = llvm::IntegerType::get(TheContext, 64);
 
     // Define and start the main Function
 		// maybe define the main after reading the arguments or change the name
@@ -189,10 +189,13 @@ protected:
 	static llvm::Type *i1;
   static llvm::Type *i8;
   static llvm::Type *i32;
-  // static llvm::Type *i64;
+  static llvm::Type *i64;
 
   static llvm::ConstantInt* c32(int n) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(32, n, true));
+  }
+	static llvm::ConstantInt* c64(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n, true));
   }
   static llvm::ConstantInt* c8(char c) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
@@ -546,8 +549,12 @@ public:
 		string var  = id;
 		ValueEntry *e = vt.lookup(var);
 		llvm::Value *v = e->val;
-    // return Builder.CreateLoad(i32, v, var);
-		return v;
+		if (v->getType() == i32) { return Builder.CreateLoad(i32, v, var);}
+		else if (v->getType() == i8) return Builder.CreateLoad(i8, v, var);
+		else if (v->getType() == i1) return Builder.CreateLoad(i1, v, var);
+		else if (v->getType() == i64) return Builder.CreateLoad(i32, v, var);
+		else
+			return Builder.CreateLoad(v);
 	}
 	virtual llvm::AllocaInst* compile_alloc() const override {
 		string var  = id;
@@ -787,48 +794,62 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		llvm::Value *v = condition->compile();
-		// cout << v->getType();
 		llvm::Value *cond = Builder.CreateICmpNE(v, c1(0), "if_cond");
 		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *ThenBB =
       llvm::BasicBlock::Create(TheContext, "then", TheFunction);
-		llvm::BasicBlock *IfElseBB =
-      llvm::BasicBlock::Create(TheContext, "ifelse", TheFunction);
+		vector<llvm::BasicBlock*> IfElseVec;
+		if(elsif_branches != nullptr && !(elsif_branches->empty()))
+			for(Branch *b: *elsif_branches)
+				IfElseVec.push_back(llvm::BasicBlock::Create(TheContext, "ifelse", TheFunction));
+    else IfElseVec.push_back(llvm::BasicBlock::Create(TheContext, "ifelse", TheFunction));
 		llvm::BasicBlock *ElseBB =
       llvm::BasicBlock::Create(TheContext, "else", TheFunction);
 		llvm::BasicBlock *AfterBB =
       llvm::BasicBlock::Create(TheContext, "endif", TheFunction);
 
-		if(elsif_branches != nullptr && !(elsif_branches->empty()))
+		llvm::BasicBlock *IfElseBB;
+		IfElseBB = IfElseVec.back();
+		IfElseVec.pop_back();
+		if(elsif_branches != nullptr){
 			Builder.CreateCondBr(cond, ThenBB, IfElseBB);
-		else if(else_branch != nullptr){
-			IfElseBB->eraseFromParent();
-			Builder.CreateCondBr(cond, ThenBB, ElseBB);
 		}
 		else {
 			IfElseBB->eraseFromParent();
 			ElseBB->eraseFromParent();
-			// TODO: problem when we are inside an ifelse branch
 			Builder.CreateCondBr(cond, ThenBB, AfterBB);
 		}
+
 		Builder.SetInsertPoint(ThenBB);
 		for(shared_ptr<Stmt> s: *cond_true) s->compile();
 		if (!retval) Builder.CreateBr(AfterBB);
 		else retval = false;
+
 		if(elsif_branches != nullptr) {
 			Builder.SetInsertPoint(IfElseBB);
-			for(Branch *b: *elsif_branches) b->compile();
-			if (!retval) Builder.CreateBr(AfterBB);
-			else retval = false;
-		}
-		if(else_branch != nullptr){
-	    Builder.SetInsertPoint(ElseBB);
+			for(Branch *b: *elsif_branches) {
+				b->compile();
+				if(!(IfElseVec.empty())){
+					IfElseBB = IfElseVec.back();
+					IfElseVec.pop_back();
+					Builder.CreateBr(IfElseBB);
+					// else retval = false;
+					Builder.SetInsertPoint(IfElseBB);
+				}
+				else {
+					Builder.CreateBr(ElseBB);
+					// else retval = false;
+					Builder.SetInsertPoint(ElseBB);
+				}
+			}
+			if (elsif_branches->empty()) Builder.CreateBr(ElseBB);
+		  Builder.SetInsertPoint(ElseBB);
 			if(else_branch != nullptr) else_branch->compile();
-			if (!retval) Builder.CreateBr(AfterBB);
+			Builder.CreateBr(AfterBB);
 		}
     Builder.SetInsertPoint(AfterBB);
 		// TODO: problem when there is no other body in the afterBB afterwards
-		retval = false;
+		// retval = false;
 		return nullptr;
 	}
 private:
@@ -875,31 +896,32 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		for(shared_ptr<Simple> s: *inits) 	s->compile();
-		llvm::Value *cond = condition->compile();
-		llvm::BasicBlock *PrevBB = Builder.GetInsertBlock();
-    llvm::Function *TheFunction = PrevBB->getParent();
+		cout << *condition << endl;
+		// llvm::Value *cond = condition->compile();
+		// llvm::BasicBlock *PrevBB = Builder.GetInsertBlock();
+    // llvm::Function *TheFunction = PrevBB->getParent();
+		//
+    // llvm::BasicBlock *LoopBB =
+    //   llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
+    // llvm::BasicBlock *BodyBB =
+    //   llvm::BasicBlock::Create(TheContext, "body", TheFunction);
+    // llvm::BasicBlock *AfterBB =
+    // llvm::BasicBlock::Create(TheContext, "endfor", TheFunction);
 
-    llvm::BasicBlock *LoopBB =
-      llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
-    llvm::BasicBlock *BodyBB =
-      llvm::BasicBlock::Create(TheContext, "body", TheFunction);
-    llvm::BasicBlock *AfterBB =
-    llvm::BasicBlock::Create(TheContext, "endfor", TheFunction);
-
-    Builder.CreateBr(LoopBB);
-    Builder.SetInsertPoint(LoopBB);
-		llvm::PHINode *phi_iter = Builder.CreatePHI(i32, 2, "iter");
-    phi_iter->addIncoming(cond, PrevBB);
-		llvm::Value *loop_cond =
-      Builder.CreateICmpSGT(phi_iter, c32(0), "loop_cond");
-		Builder.CreateCondBr(loop_cond, BodyBB, AfterBB);
-    Builder.SetInsertPoint(BodyBB);
-		for(shared_ptr<Simple> s: *steps) 	s->compile();
-		llvm::Value *remaining = condition->compile();
-		for(shared_ptr<Stmt> s: *cond_true) s->compile();
-		phi_iter->addIncoming(remaining, Builder.GetInsertBlock());
-    Builder.CreateBr(LoopBB);
-    Builder.SetInsertPoint(AfterBB);
+    // Builder.CreateBr(LoopBB);
+    // Builder.SetInsertPoint(LoopBB);
+		// llvm::PHINode *phi_iter = Builder.CreatePHI(i32, 2, "iter");
+    // phi_iter->addIncoming(cond, PrevBB);
+		// llvm::Value *loop_cond =
+    //   Builder.CreateICmpSGT(phi_iter, c32(0), "loop_cond");
+		// Builder.CreateCondBr(loop_cond, BodyBB, AfterBB);
+    // Builder.SetInsertPoint(BodyBB);
+		// for(shared_ptr<Simple> s: *steps) 	s->compile();
+		// llvm::Value *remaining = condition->compile();
+		// for(shared_ptr<Stmt> s: *cond_true) s->compile();
+		// phi_iter->addIncoming(remaining, Builder.GetInsertBlock());
+    // Builder.CreateBr(LoopBB);
+    // Builder.SetInsertPoint(AfterBB);
 		return nullptr;
 	}
 private:
