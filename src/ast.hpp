@@ -557,7 +557,7 @@ public:
 			return Builder.CreateLoad(v);
 	}
 	virtual llvm::AllocaInst* compile_alloc() const override {
-		string var  = id;
+		string var = string(id);
 		ValueEntry *e = vt.lookup(var);
     return e->alloc;
 	}
@@ -632,10 +632,11 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		llvm::Value *rhs = expr->compile();
+		string name = string(atom->getId());
 		llvm::Value *lhs = atom->compile_alloc();
 		Builder.CreateStore(rhs, lhs);
-		string name = string(atom->getId());
 		vt.insert(name, lhs);
+
 		return nullptr;
 	}
 private:
@@ -691,7 +692,10 @@ public:
 			argsv.push_back(v);
 			i++;
 		}
-		return Builder.CreateCall(func_value, argsv, "calltmp");
+		llvm::Value *ret = Builder.CreateCall(func_value, argsv, "calltmp");
+		// for (auto &Arg : func_value->args())
+		// 	vt.insert(Arg.getName(), &Arg);
+		return ret;
 	}
 	Type getType(){
 		return type;
@@ -896,32 +900,31 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		for(shared_ptr<Simple> s: *inits) 	s->compile();
-		cout << *condition << endl;
-		// llvm::Value *cond = condition->compile();
-		// llvm::BasicBlock *PrevBB = Builder.GetInsertBlock();
-    // llvm::Function *TheFunction = PrevBB->getParent();
-		//
-    // llvm::BasicBlock *LoopBB =
-    //   llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
-    // llvm::BasicBlock *BodyBB =
-    //   llvm::BasicBlock::Create(TheContext, "body", TheFunction);
-    // llvm::BasicBlock *AfterBB =
-    // llvm::BasicBlock::Create(TheContext, "endfor", TheFunction);
+		llvm::Value *cond = condition->compile();
+		llvm::BasicBlock *PrevBB = Builder.GetInsertBlock();
+    llvm::Function *TheFunction = PrevBB->getParent();
 
-    // Builder.CreateBr(LoopBB);
-    // Builder.SetInsertPoint(LoopBB);
-		// llvm::PHINode *phi_iter = Builder.CreatePHI(i32, 2, "iter");
-    // phi_iter->addIncoming(cond, PrevBB);
+    llvm::BasicBlock *LoopBB =
+      llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
+    llvm::BasicBlock *BodyBB =
+      llvm::BasicBlock::Create(TheContext, "body", TheFunction);
+    llvm::BasicBlock *AfterBB =
+    llvm::BasicBlock::Create(TheContext, "endfor", TheFunction);
+
+    Builder.CreateBr(LoopBB);
+    Builder.SetInsertPoint(LoopBB);
+		llvm::PHINode *phi_iter = Builder.CreatePHI(i1, 2, "iter");
+    phi_iter->addIncoming(cond, PrevBB);
 		// llvm::Value *loop_cond =
-    //   Builder.CreateICmpSGT(phi_iter, c32(0), "loop_cond");
-		// Builder.CreateCondBr(loop_cond, BodyBB, AfterBB);
-    // Builder.SetInsertPoint(BodyBB);
-		// for(shared_ptr<Simple> s: *steps) 	s->compile();
-		// llvm::Value *remaining = condition->compile();
-		// for(shared_ptr<Stmt> s: *cond_true) s->compile();
-		// phi_iter->addIncoming(remaining, Builder.GetInsertBlock());
-    // Builder.CreateBr(LoopBB);
-    // Builder.SetInsertPoint(AfterBB);
+    //   Builder.CreateICmpSGT(phi_iter, c1(0), "loop_cond");
+		Builder.CreateCondBr(phi_iter, BodyBB, AfterBB);
+    Builder.SetInsertPoint(BodyBB);
+		for(shared_ptr<Stmt> s: *cond_true) 	s->compile();
+		for(shared_ptr<Simple> s: *steps) s->compile();
+		llvm::Value *remaining = condition->compile();
+		phi_iter->addIncoming(remaining, Builder.GetInsertBlock());
+    Builder.CreateBr(LoopBB);
+    Builder.SetInsertPoint(AfterBB);
 		return nullptr;
 	}
 private:
@@ -958,6 +961,11 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		// TODO: call by ref how?
+		for(const char* i: *idl) {
+			string name = string(i);
+			llvm::AllocaInst *a = nullptr;
+			vt.insert(name, a);
+		}
 		return nullptr;
 	}
 	pair<Type, int> getType() {
@@ -1074,6 +1082,10 @@ public:
 
 		vt.insert(func_name, F);
 		vt.openScope();
+		if (fl)
+			for(Formal *f: *fl) {
+				f->compile();
+			}
 		llvm::BasicBlock *CurrentBB = Builder.GetInsertBlock();
 		if (!main & CurrentBB->empty()) CurrentBB->eraseFromParent();
 		else if (!main) Builder.CreateBr(EndFunc);

@@ -151,14 +151,7 @@ public:
 	    return &defined[c];
   }
   void insert(string c, llvm::Value *v) {
-		if (defined.find(c) != defined.end()) {
-				int ofst = defined[c].offset;
-				defined[c] = ValueEntry(v, ofst);
-		}
-		else {
-			defined[c] = ValueEntry(v, offset++);
-			++size;
-		}
+			defined[c].val = v;
 	}
 	void insert(string c, llvm::Function *f) {
 		if (defined.find(c) != defined.end()) {
@@ -171,14 +164,8 @@ public:
 		}
   }
 	void insert(string c, llvm::AllocaInst *a) {
-		if (defined.find(c) != defined.end()) {
-				int ofst = defined[c].offset;
-				defined[c] = ValueEntry(a, ofst);
-		}
-		else {
-			defined[c] = ValueEntry(a, offset++);
-	    ++size;
-		}
+		defined[c] = ValueEntry(a, offset++);
+    ++size;
   }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
@@ -205,7 +192,10 @@ public:
     return nullptr;
   }
   void insert(string c, llvm::Value *v) {
-    scopes.back().insert(c, v);
+		for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
+			ValueEntry *e = i->lookup(c);
+      if (e != nullptr) i->insert(c, v);
+    }
   }
 	void insert(string c, llvm::Function *f) {
     scopes.back().insert(c, f);

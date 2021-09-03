@@ -1,17 +1,13 @@
 def simple ():
-  int i
-  bool b
 
   def bool prime? (int n):
-    int a
-    bool b
-    i := 1
-    i := 2
-    b := i<2
+    int i
+    i := n/2
     return true
   end
 
   int limit, number, counter
+  bool c
   counter := 0
-  b:=prime?(2)
+  c:=prime?(2)
 end
