@@ -83,9 +83,8 @@ extern int yydebug;
     T_string = 289,
     T_constInt = 290,
     T_constChar = 291,
-    T_constBool = 292,
-    PLUS_SIGN = 293,
-    MINUS_SIGN = 294
+    PLUS_SIGN = 292,
+    MINUS_SIGN = 293
   };
 #endif
 
@@ -93,12 +92,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 71 "parser.y"
+#line 70 "parser.y"
 
 	const char *cstr;			/* identifiers and constant strings*/
 	int cint;							/* const integers */
 	char cchar;						/* const characters */
-	bool cbool;					/* const bools */
 	Def* def;
 	vector<shared_ptr<Def>>* defl;
 	Header* h;
@@ -117,7 +115,7 @@ union YYSTYPE
 	vector<shared_ptr<Expr>>* exprl;
 	Atom* atom;
 
-#line 121 "parser.hpp"
+#line 119 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

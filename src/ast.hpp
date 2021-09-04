@@ -151,6 +151,51 @@ public:
     i32 = llvm::IntegerType::get(TheContext, 32);
     i64 = llvm::IntegerType::get(TheContext, 64);
 
+		// Initialize Library Functions
+
+		// void puti(int n)
+    llvm::FunctionType *puti_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i32}, false);
+    Puti = llvm::Function::Create(puti_type, llvm::Function::ExternalLinkage, "puti", TheModule.get());
+
+		// void putb(bool b)
+    llvm::FunctionType *putb_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i1}, false);
+    Putb = llvm::Function::Create(putb_type, llvm::Function::ExternalLinkage, "putb", TheModule.get());
+
+		// void putc(char c)
+    llvm::FunctionType *putc_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i8}, false);
+    Putc = llvm::Function::Create(putc_type, llvm::Function::ExternalLinkage, "putc", TheModule.get());
+
+		// void puts(char[] s)
+    llvm::FunctionType *puts_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {llvm::PointerType::get(i8, 0)}, false);
+    Puts = llvm::Function::Create(puts_type, llvm::Function::ExternalLinkage, "puts", TheModule.get());
+
+		// int geti()
+    llvm::FunctionType *geti_type = llvm::FunctionType::get(i32, {}, false);
+    Geti = llvm::Function::Create(geti_type, llvm::Function::ExternalLinkage, "geti", TheModule.get());
+
+		// bool getb()
+    llvm::FunctionType *getb_type = llvm::FunctionType::get(i1, {}, false);
+    Getb = llvm::Function::Create(getb_type, llvm::Function::ExternalLinkage, "getb", TheModule.get());
+
+		// char getc()
+    llvm::FunctionType *getc_type = llvm::FunctionType::get(i8, {}, false);
+    Getc = llvm::Function::Create(getc_type, llvm::Function::ExternalLinkage, "getc", TheModule.get());
+
+		// void gets(int n, char[] s)
+    llvm::FunctionType *gets_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i32, llvm::PointerType::get(i8, 0)}, false);
+    Gets = llvm::Function::Create(gets_type, llvm::Function::ExternalLinkage, "gets", TheModule.get());
+
+/*
+		static llvm::Function *Abs;
+		static llvm::Function *Ord;
+		static llvm::Function *Chr;
+
+		static llvm::Function *Strlen;
+		static llvm::Function *Strcmp;
+		static llvm::Function *Strcpy;
+		static llvm::Function *Strcat;
+		*/
+
     // Define and start the main Function
 		// maybe define the main after reading the arguments or change the name
     llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
@@ -185,6 +230,26 @@ protected:
 	// NamedValues: keeps track of which values are defined in the current scope
 	// and what their LLVM representation is
 	// the only values that can be in the NamedValues map are function arguments.
+
+	static llvm::Function *Puti;
+  static llvm::Function *Putb;
+  static llvm::Function *Putc;
+  static llvm::Function *Puts;
+
+  static llvm::Function *Geti;
+  static llvm::Function *Getb;
+	static llvm::Function *Getc;
+  static llvm::Function *Gets;
+
+	static llvm::Function *Abs;
+	static llvm::Function *Ord;
+	static llvm::Function *Chr;
+
+	static llvm::Function *Strlen;
+	static llvm::Function *Strcmp;
+	static llvm::Function *Strcpy;
+	static llvm::Function *Strcat;
+
 
 	static llvm::Type *i1;
   static llvm::Type *i8;
@@ -572,7 +637,7 @@ public:
 			int i = 0;
 			for (auto &Arg : func_value->args()){
 				string name = Arg.getName();
-				if (refs.count(name) & i == index){
+				if (refs.count(name) & (i == index)){
 					ValueEntry *parentry = vt.lookup(var);
 					return parentry->alloc;
 				}
