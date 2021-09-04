@@ -356,6 +356,9 @@ public:
 		}
     return nullptr;
 	}
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
+		return compile();
+	}
 private:
 	union TC {
 		int integer;
@@ -405,6 +408,9 @@ public:
 		else if (op == "head") return nullptr;// return the first value of the List
 		else if(op == "tail") return nullptr;//return the last value of the list
 		else return nullptr;
+	}
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
+		return compile();
 	}
 private:
 	string op;
@@ -463,6 +469,9 @@ public:
 		else if (op == ">=") return Builder.CreateICmpSGE(l, r, "sgemp");
     else return nullptr;
 	}
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
+		return compile();
+	}
 private:
 	string op;
 	Expr* expr1;
@@ -508,6 +517,9 @@ public:
 		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array_type, v, "tmparray");
 		ArrayAlloc->setAlignment(16);
 		return nullptr;
+	}
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
+		return compile();
 	}
 private:
 	Type new_type;
@@ -622,6 +634,9 @@ public:
 	}
 	virtual llvm::AllocaInst* compile_alloc() const override {
 		return nullptr;
+	}
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
+		return compile();
 	}
 private:
 	Atom* atom;
@@ -742,19 +757,11 @@ public:
 		vector<llvm::Value *> argsv = {};
 		if (exprList)
 			for(shared_ptr<Expr> e: *exprList) {
-				cout << *e << endl;
 				llvm::Value *v = e->compile_check_call(true, func_name, i);
-
-				// ValueEntry *entry = vt.lookup(v->getName());
-				cout << "before push" << endl;
-				// Builder.CreateAdd(c32(0), v, "addtmp");
 				argsv.push_back(v);
-				cout << "after push" << endl;
 				i++;
 			}
-		cout << "after for" << endl;
 		llvm::Value *ret = Builder.CreateCall(func_value, argsv, "calltmp");
-		cout << "after call" << endl;
 		return ret;
 	}
 	Type getType(){
@@ -780,7 +787,9 @@ public:
 		type = call->getType();
 	}
 	virtual llvm::Value* compile() const override {
-		return call->compile();
+		llvm::Value *ret =  call->compile();
+		return ret;
+
 	}
 	virtual llvm::AllocaInst* compile_alloc() const override {
 		return nullptr;
@@ -1087,7 +1096,6 @@ public:
 					if (!((e->type == type) & (e->params == params))) error("Mismatch in function definition");
 			}	// check if the parameters and the type are the same
 		}
-		// TODO: check that main is void and with no arguments
 		// TODO: no need to open (and close) scope when you do a func_decl (func==false)
 		st.openScope();
 		cout << "+++ Opening new scope!" << endl;
@@ -1101,6 +1109,8 @@ public:
 	}
 	virtual llvm::Value* compile(llvm::BasicBlock* EndFunc) const {
 		bool main = false;
+		string func_name = string(id);
+		if (func_name == "main") func_name = "marilena";
 		if(vt.EmptyScopes()){
 			vt.openScope();
 			main = true;
@@ -1110,7 +1120,6 @@ public:
 		else if (type.p == TYPE_bool) func_type = i1;
 		else if (type.p == TYPE_char) func_type = i8;
 		else func_type = llvm::Type::getVoidTy(TheContext);
-		string func_name = string(id);
 		vector<llvm::Type*> params = {};
 		if (fl)
 			for(Formal *f: *fl) {
@@ -1161,6 +1170,9 @@ public:
 	string getId() {
 		return string(id);
 	}
+	void setId(const char* name){
+		id = name;
+	}
 	bool isVoid() {
 		return type.p == TYPE_null;
 	}
@@ -1207,6 +1219,7 @@ public:
 	virtual llvm::Value* compile() const override {
 		// First, check for an existing function from a previous 'extern' declaration.
 		string func_name = hd->getId();
+		if (func_name == "main") func_name = "marilena";
 		llvm::Function *ParentFunc = Builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *EndFunc =
       llvm::BasicBlock::Create(TheContext, "continue", ParentFunc);
