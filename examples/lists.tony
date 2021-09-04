@@ -1,5 +1,5 @@
 def main ():
-
+	puti(1)
   def bool prime? (int n):
     int i
 
