@@ -56,6 +56,7 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 %token<cstr> T_id T_string
 %token<cint>	T_constInt
 %token<cchar> T_constChar
+%token<cbool> T_constBool
 
 %left<cstr> "or"
 %left<cstr> "and"
@@ -71,6 +72,7 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 	const char *cstr;			/* identifiers and constant strings*/
 	int cint;							/* const integers */
 	char cchar;						/* const characters */
+	bool cbool;					/* const bools */
 	Def* def;
 	vector<shared_ptr<Def>>* defl;
 	Header* h;
@@ -233,7 +235,12 @@ simple:
 ;
 
 call:
-	T_id '(' expr_list ')'	{Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
+// TODO: temporary fix for printing
+ 	"puti" '(' T_constInt ')'        { printf("%d", $3); }
+| "putb" '(' T_constBool ')'       { printf("%d", $3); }
+| "putc" '(' T_constChar ')'       { printf("%c", $3); }
+| "puts" '(' T_string ')'     { printf("%s", $3); }
+|	T_id '(' expr_list ')'	{Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
 | T_id '(' ')'						{Type t; t.p = TYPE_null; $$ = new Call($1, t); }
 ;
 
