@@ -301,7 +301,7 @@ public:
 		}
 		else return (type.c)->getType();
 	}
-	// virtual llvm::Value* compile() const override {}
+	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const {}
 
 protected:
   Type type;
@@ -546,15 +546,39 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
+		return compile_check_call();
+	}
+
+	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const override{
 		string var  = id;
+		llvm::Value *v;
+		if (call){
+			llvm::Function *func_value = TheModule->getFunction(func_name);
+			ValueEntry *e = vt.lookup(func_value->getName());
+			map<string, llvm::Value*> refs = e->refs;
+			// define which params are by ref
+			int i = 0;
+			for (auto &Arg : func_value->args()){
+				string name = Arg.getName();
+				if (refs.count(name) & i == index){
+					ValueEntry *parentry = vt.lookup(var);
+					return parentry->alloc;
+				}
+				i++;
+			}
+		}
 		ValueEntry *e = vt.lookup(var);
-		llvm::Value *v = e->val;
-		if (v->getType() == i32) { return Builder.CreateLoad(i32, v, var);}
-		else if (v->getType() == i8) return Builder.CreateLoad(i8, v, var);
-		else if (v->getType() == i1) return Builder.CreateLoad(i1, v, var);
-		else if (v->getType() == i64) return Builder.CreateLoad(i32, v, var);
-		else
-			return Builder.CreateLoad(v);
+		v = e->val;
+		if (e->alloc){
+			llvm::Value *ret =  Builder.CreateLoad(v, var);
+			//TODO: not only getInt32PtrTy but i1 and i8 too
+			if (ret->getType() == llvm::Type::getInt32PtrTy(TheContext)) return Builder.CreateLoad(ret, var);
+			return ret;
+		}
+		else {
+			if (v->getType() == llvm::Type::getInt32PtrTy(TheContext)) return Builder.CreateLoad(v, var);
+			return v;
+		}
 	}
 	virtual llvm::AllocaInst* compile_alloc() const override {
 		string var = string(id);
@@ -631,12 +655,42 @@ public:
 		// for example it cant be string or call??
 	}
 	virtual llvm::Value* compile() const override {
+		bool ref = 0;
 		llvm::Value *rhs = expr->compile();
 		string name = string(atom->getId());
 		llvm::Value *lhs = atom->compile_alloc();
-		Builder.CreateStore(rhs, lhs);
-		vt.insert(name, lhs);
+		ValueEntry *e = vt.lookup(name);
 
+		if (!lhs) {
+			llvm::AllocaInst *al;
+			// is a parameter!
+			// if is call by value we just need to allocate memory and store (locally)
+			if (e->call == "val"){
+				al = Builder.CreateAlloca(rhs->getType(), nullptr, name);
+				al->setAlignment(4);
+				vt.insert(name, al);
+				lhs = al;
+			}
+			else if (e->call == "ref"){
+				//if call by ref we need PointerType to rhs->getType() and setAlignment(8)
+				al = Builder.CreateAlloca(llvm::PointerType::getUnqual(rhs->getType()), nullptr, name);
+				al->setAlignment(8);
+				vt.insert(name, al);
+				lhs = al;
+				Builder.CreateStore(e->val, lhs);
+				llvm::Value *ptr = Builder.CreateLoad(lhs, name);
+				Builder.CreateStore(rhs, ptr);
+				ref = 1;
+			}
+		}
+		if (!ref) Builder.CreateStore(rhs, lhs);
+		vt.insert(name, lhs);
+		if (e->call == "ref"){
+			string func_name = Builder.GetInsertBlock()->getParent()->getName();
+			ValueEntry *fe = vt.lookup(func_name);
+			map<string, llvm::Value*> refs = fe->refs;
+			refs[name] = lhs;
+		}
 		return nullptr;
 	}
 private:
@@ -651,11 +705,12 @@ public:
 	virtual void printNode(ostream &out) const override {
 		out << "Call(" << id << ", ";
 		bool first = true;
-		for(shared_ptr<Expr> e: *exprList) {
-			if(!first) out << ", ";
-			first = false;
-			out << *e;
-		}
+		if (exprList)
+			for(shared_ptr<Expr> e: *exprList) {
+				if(!first) out << ", ";
+				first = false;
+				out << *e;
+			}
 		out << ")";
 	}
 	virtual void sem() {
@@ -682,19 +737,24 @@ public:
 		// Look up the name in the global module table.
 		string func_name = string(id);
 		llvm::Function *func_value = TheModule->getFunction(func_name);
-		// ValueEntry *func = vt.lookup(func_name);
-		// llvm::Function *func_value = func->func;
 
 		int i = 0;
-		vector<llvm::Value *> argsv;
-		for(shared_ptr<Expr> e: *exprList) {
-			llvm::Value *v = e->compile();
-			argsv.push_back(v);
-			i++;
-		}
+		vector<llvm::Value *> argsv = {};
+		if (exprList)
+			for(shared_ptr<Expr> e: *exprList) {
+				cout << *e << endl;
+				llvm::Value *v = e->compile_check_call(true, func_name, i);
+
+				// ValueEntry *entry = vt.lookup(v->getName());
+				cout << "before push" << endl;
+				// Builder.CreateAdd(c32(0), v, "addtmp");
+				argsv.push_back(v);
+				cout << "after push" << endl;
+				i++;
+			}
+		cout << "after for" << endl;
 		llvm::Value *ret = Builder.CreateCall(func_value, argsv, "calltmp");
-		// for (auto &Arg : func_value->args())
-		// 	vt.insert(Arg.getName(), &Arg);
+		cout << "after call" << endl;
 		return ret;
 	}
 	Type getType(){
@@ -964,12 +1024,18 @@ public:
 		for(const char* i: *idl) {
 			string name = string(i);
 			llvm::AllocaInst *a = nullptr;
-			vt.insert(name, a);
+			if (call_by_reference){
+				vt.insert(name, a, "ref");
+			}
+			else vt.insert(name, a, "val");
 		}
 		return nullptr;
 	}
 	pair<Type, int> getType() {
 		return make_pair(type, idl->size());
+	}
+	bool getTypeOfCall() {
+		return call_by_reference;
 	}
 	vector<const char*>* getIds(){
 		return idl;
@@ -1054,33 +1120,34 @@ public:
 				else if (pair_type.first.p == TYPE_bool) llvm_pair_type = i1;
 				else if (pair_type.first.p == TYPE_char) llvm_pair_type = i8;
 				// array and list type?
+				if (f->getTypeOfCall()) llvm_pair_type = llvm::PointerType::getUnqual(llvm_pair_type);
 				params.insert(params.end(), pair_type.second, llvm_pair_type);
 			}
 		llvm::FunctionType *FT =
     	llvm::FunctionType::get(func_type, params, false);
-
 		llvm::Function *F =
 		  llvm::Function::Create(FT, llvm::Function::ExternalLinkage, func_name, TheModule.get());
-
 		if (main){
 			 Builder.CreateCall(F, {});
 			 Builder.CreateRet(c32(0));
 		}
 		// Set names for all arguments.
 		vector<string> Args = {};
+		map<string, llvm::Value*> refs = {};
 		if (fl)
 			for(Formal *f: *fl) {
+				bool call_by_reference = f->getTypeOfCall();
 				vector<const char*>* idl = f->getIds();
 				for(const char* i: *idl) {
 					string name = string(i);
 					Args.push_back(name);
+					if (call_by_reference) refs[name] = nullptr;
 				}
 			}
 		unsigned Idx = 0;
 		for (auto &Arg : F->args())
 		  Arg.setName(Args[Idx++]);
-
-		vt.insert(func_name, F);
+		vt.insert(func_name, F, refs);
 		vt.openScope();
 		if (fl)
 			for(Formal *f: *fl) {
@@ -1145,12 +1212,11 @@ public:
       llvm::BasicBlock::Create(TheContext, "continue", ParentFunc);
 		llvm::Function *TheFunction = TheModule->getFunction(func_name);
 		// if the function has not be declared do it!
-		if (!TheFunction)
+		if (!TheFunction){
 		  hd->compile(EndFunc);
 			ValueEntry *e = vt.lookup(func_name);
 			TheFunction = e->func;
-		// else:
-			// TODO: we have to check if the parameters' names are the same!
+		}
 		// Create a new basic block to start insertion into.
 		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
 		Builder.SetInsertPoint(BB);

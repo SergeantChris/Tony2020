@@ -1,44 +1,9 @@
-def main ():
- int i
- bool b
- bool c
- int[] pin, pan
-  def list[int] qsort (list[int] l, k; int a):
-		char c
-		int seed, i
-    list[int] l
-		bool kati
-		bool katiallo
-		b := true
-		katiallo := true
-		kati := true
-		c := 'c'
-		if not not kati = katiallo:
-			kati := not kati
-		end
-    for i := 0, l := nil; i < 16; i := i+1:
-      seed := (seed * 137 + 220 + i) mod 101
-      l := seed # l
-    end
+def simple ():
 
-    return l
+  def bool prime? (int n):
+    return true
   end
 
-
-%	list[list[int]] k
-%	list[list[int]] m
-%	if k = l:
-%		n := k+l
-%		m := k # l
-%	end
-	l := nil
-  a := qsort(l)
-	pin := new int[5]
-	pan := new int[1-1]
-	if pin[4] = 0:
-		b := true
-	end
-	if pan[0] = 0:
-		b := true
-	end
+  bool c
+  c := prime?(1)
 end

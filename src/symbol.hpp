@@ -134,10 +134,12 @@ struct ValueEntry {
 	llvm::Function *func;
 	llvm::AllocaInst *alloc;
   int offset;
+	string call; // call by ref or val or not a parameter (default = no)
+	map<string, llvm::Value*> refs; // call by ref parameters
   ValueEntry() {}
   ValueEntry(llvm::Value *v, int ofs) : val(v), offset(ofs) {}
-	ValueEntry(llvm::Function *f, int ofs) : func(f), offset(ofs) {}
-	ValueEntry(llvm::AllocaInst *a, int ofs) : alloc(a), offset(ofs) {
+	ValueEntry(llvm::Function *f, int ofs, map<string, llvm::Value*> r) : func(f), offset(ofs), refs(r) {}
+	ValueEntry(llvm::AllocaInst *a, int ofs, string c) : alloc(a), offset(ofs), call(c) {
 		val = nullptr;
 	}
 };
@@ -153,19 +155,21 @@ public:
   void insert(string c, llvm::Value *v) {
 			defined[c].val = v;
 	}
-	void insert(string c, llvm::Function *f) {
-		if (defined.find(c) != defined.end()) {
-				int ofst = defined[c].offset;
-				defined[c] = ValueEntry(f, ofst);
-		}
+	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs) {
+		if (defined.find(c) != defined.end())
+			defined[c].func = f;
 		else {
-			defined[c] = ValueEntry(f, offset++);
+			defined[c] = ValueEntry(f, offset++, refs);
 	    ++size;
 		}
   }
-	void insert(string c, llvm::AllocaInst *a) {
-		defined[c] = ValueEntry(a, offset++);
-    ++size;
+	void insert(string c, llvm::AllocaInst *a, string call) {
+		if (defined.find(c) != defined.end())
+			defined[c].alloc = a;
+		else{
+			defined[c] = ValueEntry(a, offset++, call);
+	    ++size;
+		}
   }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
@@ -197,11 +201,11 @@ public:
       if (e != nullptr) i->insert(c, v);
     }
   }
-	void insert(string c, llvm::Function *f) {
-    scopes.back().insert(c, f);
+	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs = {}) {
+    scopes.back().insert(c, f, refs);
   }
-	void insert(string c, llvm::AllocaInst *a) {
-    scopes.back().insert(c, a);
+	void insert(string c, llvm::AllocaInst *a, string call = "no") {
+    scopes.back().insert(c, a, call);
   }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();
