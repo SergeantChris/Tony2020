@@ -56,7 +56,6 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 %token<cstr> T_id T_string
 %token<cint>	T_constInt
 %token<cchar> T_constChar
-%token<cbool> T_constBool
 
 %left<cstr> "or"
 %left<cstr> "and"
@@ -72,7 +71,6 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 	const char *cstr;			/* identifiers and constant strings*/
 	int cint;							/* const integers */
 	char cchar;						/* const characters */
-	bool cbool;					/* const bools */
 	Def* def;
 	vector<shared_ptr<Def>>* defl;
 	Header* h;
