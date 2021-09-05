@@ -323,4 +323,11 @@ private:
 	vector<const char*>* idl;
 };
 
+
+class Library {
+public:
+	Library();
+	void init();
+};
+
 #endif

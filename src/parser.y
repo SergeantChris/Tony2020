@@ -13,6 +13,7 @@ using namespace std;
 #define YYERROR_VERBOSE 1
 
 SymbolTable st;
+Library *lib = new Library();
 
 int linecount = 1;
 int opt_flag=0, lco_flag=0, ico_flag=0;
@@ -114,7 +115,10 @@ program:
 		cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
 		cout << *$1 << endl;
     cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
+		st.openScope();
+		lib->init(); // Initialize all built in functions and procedures
 		$1->sem();
+		st.closeScope();
 
 		/* $1->llvm_compile_and_dump(opt_flag); */
 		return 0;

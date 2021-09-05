@@ -21,5 +21,6 @@ def main ():
   %"cute"[0] := 'x'
   l := qsort(seed, i)
   i := l[1]
-
+	puts("Ciao")
+	puti(1)
 end
