@@ -1196,7 +1196,7 @@ public:
 	virtual llvm::Value* compile(llvm::BasicBlock* EndFunc) const {
 		bool main = false;
 		string func_name = string(id);
-		if (func_name == "main") func_name = "marilena";
+		if (func_name == "main") func_name = "jackthecutestdoggo";
 		if(vt.EmptyScopes()){
 			vt.openScope();
 			main = true;
@@ -1305,7 +1305,7 @@ public:
 	virtual llvm::Value* compile() const override {
 		// First, check for an existing function from a previous 'extern' declaration.
 		string func_name = hd->getId();
-		if (func_name == "main") func_name = "marilena";
+		if (func_name == "main") func_name = "jackthecutestdoggo";
 		llvm::Function *ParentFunc = Builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *EndFunc =
       llvm::BasicBlock::Create(TheContext, "continue", ParentFunc);
