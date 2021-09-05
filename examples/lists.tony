@@ -1,24 +1,5 @@
 def main ():
-
-  def bool prime? (int n):
-    int i
-
-    if n < 0:
-      return prime?(-n)
-    elsif n < 2:
-      return false
-    elsif n = 2:
-      return true
-    elsif n mod 2 = 0: return false
-    else:
-      for i := 3; i <= n / 2; i := i + 2:
-        if n mod i = 0: return false end
-      end
-      return true
-    end
-    return true
-  end
-
-  int limit, number, counter
-  counter := 0
+  int i
+  i := 1
+  puti(1)
 end

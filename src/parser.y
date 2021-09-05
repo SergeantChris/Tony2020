@@ -235,12 +235,7 @@ simple:
 ;
 
 call:
-// TODO: temporary fix for printing
- 	"puti" '(' T_constInt ')'        { printf("%d", $3); }
-| "putb" '(' T_constBool ')'       { printf("%d", $3); }
-| "putc" '(' T_constChar ')'       { printf("%c", $3); }
-| "puts" '(' T_string ')'     { printf("%s", $3); }
-|	T_id '(' expr_list ')'	{Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
+	T_id '(' expr_list ')'	{Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
 | T_id '(' ')'						{Type t; t.p = TYPE_null; $$ = new Call($1, t); }
 ;
 
