@@ -1,10 +1,10 @@
 #!/bin/sh
 
-libname="tony.lib"
+libname="tonylib.a"
 
 if [ "$1" != "" ]; then
     echo "Compiling $1"
-    /src/tony < $1 > output.ll
+    /src/tony  $1 > output.ll
     if [ $? -eq 0 ]; then
       echo OK
     else
@@ -13,9 +13,9 @@ if [ "$1" != "" ]; then
       exit 1
     fi
     llc output.ll -o output.s
-    clang output.s "$libname" -o output.out
+    clang -o a.out output.s "$libname"
     echo "Executing output"
-    ./output.out
+    ./a.out
 else
   echo "No Input"
 fi
