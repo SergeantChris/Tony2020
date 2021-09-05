@@ -233,11 +233,7 @@ simple:
 ;
 
 call:
-<<<<<<< HEAD
 	T_id '(' expr_list ')'	{ Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
-=======
-	T_id '(' expr_list ')'	{Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
->>>>>>> 343cb3ee423cb46afe89f2d9b553b9f672942544
 | T_id '(' ')'						{Type t; t.p = TYPE_null; $$ = new Call($1, t); }
 ;
 
