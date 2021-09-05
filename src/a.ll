@@ -1,3 +1,7 @@
+Call with args
+Call with args
+String @ËŒç˛
+Call with args
 ; ModuleID = 'tony program'
 source_filename = "tony program"
 
@@ -17,6 +21,20 @@ declare i8 @getc()
 
 declare void @gets(i32, i8*)
 
+declare i32 @abs(i32)
+
+declare i32 @ord(i8)
+
+declare i8 @chr(i32)
+
+declare i32 @strlen(i8*)
+
+declare i32 @strcmp(i8*, i8*)
+
+declare i32 @strcpy(i8*, i8*)
+
+declare i32 @strcat(i8*, i8*)
+
 define i32 @main() {
 program_entry:
   call void @marilena()
@@ -24,11 +42,18 @@ program_entry:
 }
 
 define void @marilena() {
-continue:
+entry:
+  %n = alloca i32, align 4
+  br label %continue
+
+continue:                                         ; preds = %entry
   %limit = alloca i32, align 4
   %number = alloca i32, align 4
   %counter = alloca i32, align 4
   store i32 0, i32* %counter
+  store i32 0, i32* %n
+  %calltmp = call void @puti(i32 111)
+  %calltmp1 = call i32 @strlen(<null operand!>)
   ret void
 }
 

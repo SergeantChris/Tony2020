@@ -1843,13 +1843,13 @@ yyreduce:
 
   case 43:
 #line 236 "parser.y"
-                                {Type t; t.p = TYPE_null; (yyval.call) = new Call((yyvsp[-3].cstr), t, (yyvsp[-1].exprl)); }
+                                {cout << "Call with args" << endl; Type t; t.p = TYPE_null; (yyval.call) = new Call((yyvsp[-3].cstr), t, (yyvsp[-1].exprl)); }
 #line 1848 "parser.cpp"
     break;
 
   case 44:
 #line 237 "parser.y"
-                                                        {Type t; t.p = TYPE_null; (yyval.call) = new Call((yyvsp[-2].cstr), t); }
+                                                        {cout << "Call with no args" << endl; Type t; t.p = TYPE_null; (yyval.call) = new Call((yyvsp[-2].cstr), t); }
 #line 1854 "parser.cpp"
     break;
 

@@ -1,6 +1,6 @@
 def main ():
-	puti(1)
-  def bool prime? (int n):
+	int n
+	def bool prime? (int n):
     int i
 
     if n < 0:
@@ -21,4 +21,8 @@ def main ():
 
   int limit, number, counter
   counter := 0
+	n := 0
+	%geti()
+	puti(111)
+	strlen("Ciao")
 end
