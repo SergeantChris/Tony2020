@@ -367,6 +367,8 @@ public:
 		else return (type.c)->getType();
 	}
 	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const {}
+	virtual llvm::AllocaInst* compile_alloc() const {}
+	virtual llvm::AllocaInst* compile_alloc_mem(string name ) const {}
 
 protected:
   Type type;
@@ -560,10 +562,15 @@ public:
 		type = final_type;
 	}
 	virtual llvm::Value* compile() const override {
-		llvm::Type *array_type;
+		return compile_alloc_mem();
+	}
+	virtual llvm::AllocaInst* compile_alloc_mem(string name = "tmparray") const override {
+		//type = array(new_type)
 		llvm::Value *v = expr->compile(); // size of array
 		llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
 		uint64_t size = ci->llvm::ConstantInt::getZExtValue();
+		llvm::Type *array_type;
+
 		// initialize a array of type new_type and size expr
 		switch (new_type.p) {
 			case TYPE_int: array_type = i32; break;
@@ -578,10 +585,10 @@ public:
 		// }
 		// else element_type = list;
 
-		// llvm::ArrayType *array = llvm::ArrayType::get(array_type, size);
-		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array_type, v, "tmparray");
+		llvm::ArrayType *array = llvm::ArrayType::get(array_type, size);
+		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
 		ArrayAlloc->setAlignment(16);
-		return nullptr;
+		return ArrayAlloc;
 	}
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
 		return compile();
@@ -595,7 +602,6 @@ class Atom: virtual public Expr { //abstract class
 public:
 	virtual ~Atom() {}
 	virtual const char* getId() {return "";}
-	virtual llvm::AllocaInst* compile_alloc() const = 0;
 };
 
 class Id: public Atom {
@@ -660,6 +666,7 @@ public:
 	virtual llvm::AllocaInst* compile_alloc() const override {
 		string var = string(id);
 		ValueEntry *e = vt.lookup(var);
+		if (!e) return nullptr;
     return e->alloc;
 	}
 private:
@@ -736,10 +743,18 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		bool ref = 0;
-		llvm::Value *rhs = expr->compile();
+		// if ((((expr->getType()).c)->getId) == "array")
 		string name = string(atom->getId());
-		llvm::Value *lhs = atom->compile_alloc();
 		ValueEntry *e = vt.lookup(name);
+		if (!e) {
+			// etc i = new int[2]
+			// no store only memory allocation
+			llvm::AllocaInst *ral = expr->compile_alloc_mem(name);
+			vt.insert(name, ral);
+			return nullptr;
+		}
+		llvm::Value *rhs = expr->compile();
+		llvm::Value *lhs = atom->compile_alloc();
 
 		if (!lhs) {
 			llvm::AllocaInst *al;
@@ -826,6 +841,8 @@ public:
 				argsv.push_back(v);
 				i++;
 			}
+		if (func_value->getReturnType() == llvm::Type::getVoidTy(TheContext))
+			return Builder.CreateCall(func_value, argsv);
 		llvm::Value *ret = Builder.CreateCall(func_value, argsv, "calltmp");
 		return ret;
 	}
@@ -1373,6 +1390,13 @@ public:
 			vtype = i1;
 		else if (type.p == TYPE_char)
 			 vtype = i8;
+		else if (type.c->getId() == "array") {
+			// vt.insert(name, nullptr, "array");
+			return nullptr;
+		}
+		else if (type.c->getId() == "list") {
+			return nullptr;
+		}
 		// else continue;
 		for(const char* i: *idl){
 			string name = string(i);
