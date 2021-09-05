@@ -233,8 +233,8 @@ simple:
 ;
 
 call:
-	T_id '(' expr_list ')'	{cout << "Call with args" << endl; Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
-| T_id '(' ')'						{cout << "Call with no args" << endl; Type t; t.p = TYPE_null; $$ = new Call($1, t); }
+	T_id '(' expr_list ')'	{ Type t; t.p = TYPE_null; $$ = new Call($1, t, $3); }
+| T_id '(' ')'						{Type t; t.p = TYPE_null; $$ = new Call($1, t); }
 ;
 
 expr_list:

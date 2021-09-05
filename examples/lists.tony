@@ -23,6 +23,6 @@ def main ():
   counter := 0
 	n := 0
 	%geti()
-	puti(111)
-	strlen("Ciao")
+	%puti(111)
+	%strlen("Ciao")
 end
