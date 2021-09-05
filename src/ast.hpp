@@ -144,15 +144,17 @@ public:
     }
 
     TheFPM->doInitialization();
-
-    // Initialize Types
+/*
+ * ------------------------------------------- Initialize Types -------------------------------------------
+*/
 		i1 = llvm::IntegerType::get(TheContext, 1);
     i8 = llvm::IntegerType::get(TheContext, 8);
     i32 = llvm::IntegerType::get(TheContext, 32);
     i64 = llvm::IntegerType::get(TheContext, 64);
 
-		// Initialize Library Functions
-
+/*
+ * ------------------------------------- Initialize Library Functions -------------------------------------
+*/
 		// void puti(int n)
     llvm::FunctionType *puti_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i32}, false);
     Puti = llvm::Function::Create(puti_type, llvm::Function::ExternalLinkage, "puti", TheModule.get());
@@ -185,18 +187,37 @@ public:
     llvm::FunctionType *gets_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {i32, llvm::PointerType::get(i8, 0)}, false);
     Gets = llvm::Function::Create(gets_type, llvm::Function::ExternalLinkage, "gets", TheModule.get());
 
+		// int abs(int n)
+		llvm::FunctionType *abs_type = llvm::FunctionType::get(i32, {i32}, false);
+    Abs = llvm::Function::Create(abs_type, llvm::Function::ExternalLinkage, "abs", TheModule.get());
+
+		// int ord(char c)
+		llvm::FunctionType *ord_type = llvm::FunctionType::get(i32, {i8}, false);
+		Ord = llvm::Function::Create(ord_type, llvm::Function::ExternalLinkage, "ord", TheModule.get());
+
+		// char chr(int n)
+		llvm::FunctionType *chr_type = llvm::FunctionType::get(i8, {i32}, false);
+		Chr = llvm::Function::Create(chr_type, llvm::Function::ExternalLinkage, "chr", TheModule.get());
+
+		// int strlen(char[] s)
+		llvm::FunctionType *strlen_type = llvm::FunctionType::get(i32, {llvm::PointerType::get(i8, 0)}, false);
+		Strlen = llvm::Function::Create(strlen_type, llvm::Function::ExternalLinkage, "strlen", TheModule.get());
+
+		// int strcmp(char[] s1, s2)
+		llvm::FunctionType *strcmp_type = llvm::FunctionType::get(i32, {llvm::PointerType::get(i8, 0), llvm::PointerType::get(i8, 0)}, false);
+		Strcmp = llvm::Function::Create(strcmp_type, llvm::Function::ExternalLinkage, "strcmp", TheModule.get());
+
+		// void strcpy(char[] trg, src)
+		llvm::FunctionType *strcpy_type = llvm::FunctionType::get(i32, {llvm::PointerType::get(i8, 0), llvm::PointerType::get(i8, 0)}, false);
+		Strcpy = llvm::Function::Create(strcpy_type, llvm::Function::ExternalLinkage, "strcpy", TheModule.get());
+
+		// void strcat(char[] trg, src)
+		llvm::FunctionType *strcat_type = llvm::FunctionType::get(i32, {llvm::PointerType::get(i8, 0), llvm::PointerType::get(i8, 0)}, false);
+		Strcat = llvm::Function::Create(strcat_type, llvm::Function::ExternalLinkage, "strcat", TheModule.get());
+
 /*
-		static llvm::Function *Abs;
-		static llvm::Function *Ord;
-		static llvm::Function *Chr;
-
-		static llvm::Function *Strlen;
-		static llvm::Function *Strcmp;
-		static llvm::Function *Strcpy;
-		static llvm::Function *Strcat;
-		*/
-
-    // Define and start the main Function
+ * --------------------------------- Define and start the main Function ---------------------------------
+*/
 		// maybe define the main after reading the arguments or change the name
     llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
     llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,

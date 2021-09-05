@@ -1,5 +1,28 @@
 def main ():
-  int[] i
-  i := new int[2]
-  %puti(1)
+	int n
+	def bool prime? (int n):
+    int i
+
+    if n < 0:
+      return prime?(-n)
+    elsif n < 2:
+      return false
+    elsif n = 2:
+      return true
+    elsif n mod 2 = 0: return false
+    else:
+      for i := 3; i <= n / 2; i := i + 2:
+        if n mod i = 0: return false end
+      end
+      return true
+    end
+    return true
+  end
+
+  int limit, number, counter
+  counter := 0
+	n := 0
+	%geti()
+	puti(111)
+	strlen("Ciao")
 end
