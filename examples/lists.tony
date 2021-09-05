@@ -23,6 +23,11 @@ def main ():
   counter := 0
 	n := 0
 	%geti()
+<<<<<<< HEAD
 	%puti(111)
+=======
+	puti(111)
+	%puts("/n")
+>>>>>>> 343cb3ee423cb46afe89f2d9b553b9f672942544
 	%strlen("Ciao")
 end
