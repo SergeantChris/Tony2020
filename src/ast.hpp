@@ -585,30 +585,39 @@ public:
 	virtual llvm::Value* compile() const override {
 		return compile_alloc_mem();
 	}
-	virtual llvm::AllocaInst* compile_alloc_mem(string name = "tmparray") const override {
-		//type = array(new_type)
-		llvm::Value *v = expr->compile(); // size of array
-		llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
-		uint64_t size = ci->llvm::ConstantInt::getZExtValue();
-		llvm::Type *array_type;
-
-		// initialize a array of type new_type and size expr
-		switch (new_type.p) {
-			case TYPE_int: array_type = i32; break;
-			case TYPE_bool: array_type = i1; break;
-			case TYPE_char: array_type = i8; break;
+	llvm::Type* defineArrayType(Type t) const{
+		// switch (t.p) {
+		// 	case TYPE_int: return i32;
+		// 	case TYPE_bool: return i1;
+		// 	case TYPE_char: return i8;
+		// 	default: break;
+		// }
+		// if (t.c->getId() == "array"){
+		// 	// σιζε???
+		// 	return llvm::ArrayType::get(defineArrayType(t.c->getType()), 1);
+		// }
+		switch (t.p) {
+			case TYPE_int: return llvm::Type::getInt32PtrTy(TheContext);
+			case TYPE_bool: return llvm::Type::getInt1PtrTy(TheContext);
+			case TYPE_char: return llvm::Type::getInt8PtrTy(TheContext);
 			default: break;
 		}
-		//
-		// if (new_type.c->getId() == "array"){
-		// 	Type element_type = new_type.c->getType();
-		// 	array_type = llvm::ArrayType::get(element_type, size);;
-		// }
-		// else element_type = list;
+		if (t.c->getId() == "array"){
+			return llvm::PointerType::getUnqual(defineArrayType(t.c->getType()));
+		}
+		return nullptr;
+	}
+	virtual llvm::AllocaInst* compile_alloc_mem(string name = "tmparray") const override {
+		//type = array(new_type)
+		// llvm::Value *v = expr->compile(); // size of array
+		// llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
+		// uint64_t size = ci->llvm::ConstantInt::getZExtValue();
+		llvm::Type *array_type = defineArrayType(new_type);
 
-		llvm::ArrayType *array = llvm::ArrayType::get(array_type, size);
-		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
-		ArrayAlloc->setAlignment(16);
+		// llvm::ArrayType *array = llvm::ArrayType::get(array_type, size);
+		// llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
+		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array_type, nullptr, name);
+		ArrayAlloc->setAlignment(8);
 		return ArrayAlloc;
 	}
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
@@ -720,16 +729,23 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		llvm::Value *vexpr = expr->compile();
-		llvm::Value *vatom = atom->compile();
-		// Value *v = Builder.CreateGEP(TheVars, {c32(0), vexpr)}, name);
-		// return Builder.CreateLoad(v, name);
-		return nullptr;
+		// thin wont work with 2d arrays -> compile_alloc return nullptr
+		llvm::Value *vatom = atom->compile_alloc();
+		llvm::Value *elem = Builder.CreateLoad(vatom, "arrayelem");
+		// llvm::PointerType *elemtype = elem->getType()
+		llvm::Value *v = Builder.CreateGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemtmp");
+		cout << "okay until here 2" << endl;
+		return v;
 	}
 	virtual llvm::AllocaInst* compile_alloc() const override {
+		llvm::Value *v = compile();
 		return nullptr;
 	}
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
 		return compile();
+	}
+	virtual const char* getId() override{
+		return atom->getId();
 	}
 private:
 	Atom* atom;
@@ -764,7 +780,6 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		bool ref = 0;
-		// if ((((expr->getType()).c)->getId) == "array")
 		string name = string(atom->getId());
 		ValueEntry *e = vt.lookup(name);
 		if (!e) {
@@ -775,8 +790,9 @@ public:
 			return nullptr;
 		}
 		llvm::Value *rhs = expr->compile();
+		cout << "okay until here 1" << endl;
 		llvm::Value *lhs = atom->compile_alloc();
-
+		cout << "okay until here" << endl;
 		if (!lhs) {
 			llvm::AllocaInst *al;
 			// is a parameter!
@@ -799,6 +815,7 @@ public:
 				ref = 1;
 			}
 		}
+
 		if (!ref) Builder.CreateStore(rhs, lhs);
 		vt.insert(name, lhs);
 		if (e->call == "ref"){
@@ -1413,6 +1430,7 @@ public:
 			 vtype = i8;
 		else if (type.c->getId() == "array") {
 			// vt.insert(name, nullptr, "array");
+
 			return nullptr;
 		}
 		else if (type.c->getId() == "list") {

@@ -1,5 +1,8 @@
 def main ():
-  %int[] i
-  %i := new int[2]
-  puti(1)
+  int[] a
+  %int[][] i
+  a := new int[2]
+  %i := new int[][2]
+  a[1] := 1
+  %puti(1)
 end
