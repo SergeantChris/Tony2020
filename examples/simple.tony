@@ -1,7 +1,7 @@
 def simple ():
   def bool prime? (int n; ref int l):
-    l := n+2
-    %n := l + n
+    n := n+2
+    n := l + n
     return true
   end
 

@@ -1,8 +1,16 @@
 def main ():
   int[] a
-  %int[][] i
+  int[][] i
+  int d
+  d := 25
   a := new int[2]
-  %i := new int[][2]
-  a[1] := 1
+  i := new int[][2]
+  a[1] := d
+  i[0] := a
+  i[1] := new int[2]
+  d := a[1]
+  %a := i[0]
+  i[1][1] := d
+  d := i[1][1]
   %puti(1)
 end

@@ -129,17 +129,21 @@ private:
 
 extern SymbolTable st;
 
+enum generalType { Tint, Tbool, Tchar, Tarray, Tlist, Tnull};
+
 struct ValueEntry {
 	llvm::Value *val;
 	llvm::Function *func;
 	llvm::AllocaInst *alloc;
   int offset;
 	string call; // call by ref or val or not a parameter (default = no)
+	generalType type;
 	map<string, llvm::Value*> refs; // call by ref parameters
   ValueEntry() {}
   ValueEntry(llvm::Value *v, int ofs) : val(v), offset(ofs) {}
 	ValueEntry(llvm::Function *f, int ofs, map<string, llvm::Value*> r) : func(f), offset(ofs), refs(r) {}
-	ValueEntry(llvm::AllocaInst *a, int ofs, string c) : alloc(a), offset(ofs), call(c) {
+	ValueEntry(llvm::AllocaInst *a, int ofs, string c, generalType t) :
+	 alloc(a), offset(ofs), call(c), type(t) {
 		val = nullptr;
 	}
 };
@@ -163,11 +167,11 @@ public:
 	    ++size;
 		}
   }
-	void insert(string c, llvm::AllocaInst *a, string call) {
+	void insert(string c, llvm::AllocaInst *a, string call, generalType type) {
 		if (defined.find(c) != defined.end())
 			defined[c].alloc = a;
 		else{
-			defined[c] = ValueEntry(a, offset++, call);
+			defined[c] = ValueEntry(a, offset++, call, type);
 	    ++size;
 		}
   }
@@ -204,8 +208,8 @@ public:
 	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs = {}) {
     scopes.back().insert(c, f, refs);
   }
-	void insert(string c, llvm::AllocaInst *a, string call = "no") {
-    scopes.back().insert(c, a, call);
+	void insert(string c, llvm::AllocaInst *a, string call = "no", generalType type = Tnull) {
+    scopes.back().insert(c, a, call, type);
   }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();

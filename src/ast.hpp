@@ -378,6 +378,7 @@ public:
 	Type getType() {
 		return type;
 	}
+	virtual const char* getId() {}
 	Type getNestedType() {
 		if(isPrimitive(type)) {
 			error("");
@@ -388,7 +389,7 @@ public:
 		else return (type.c)->getType();
 	}
 	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const {}
-	virtual llvm::AllocaInst* compile_alloc() const {}
+	virtual llvm::Value* compile_alloc() const {}
 	virtual llvm::AllocaInst* compile_alloc_mem(string name ) const {}
 
 protected:
@@ -609,14 +610,14 @@ public:
 	}
 	virtual llvm::AllocaInst* compile_alloc_mem(string name = "tmparray") const override {
 		//type = array(new_type)
-		// llvm::Value *v = expr->compile(); // size of array
-		// llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
-		// uint64_t size = ci->llvm::ConstantInt::getZExtValue();
+		llvm::Value *v = expr->compile(); // size of array
+		llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
+		uint64_t size = ci->llvm::ConstantInt::getZExtValue();
 		llvm::Type *array_type = defineArrayType(new_type);
 
-		// llvm::ArrayType *array = llvm::ArrayType::get(array_type, size);
-		// llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
-		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array_type, nullptr, name);
+		llvm::ArrayType *array = llvm::ArrayType::get(array_type->getPointerElementType(), size);
+		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
+		// ArrayAlloc = Builder.CreateAlloca(array_type, nullptr, name);
 		ArrayAlloc->setAlignment(8);
 		return ArrayAlloc;
 	}
@@ -631,7 +632,7 @@ private:
 class Atom: virtual public Expr { //abstract class
 public:
 	virtual ~Atom() {}
-	virtual const char* getId() {return "";}
+	virtual const char* getId() override {}
 };
 
 class Id: public Atom {
@@ -666,6 +667,7 @@ public:
 		string var  = id;
 		llvm::Value *v;
 		if (call){
+			// cout << "call" << var << endl;
 			llvm::Function *func_value = TheModule->getFunction(func_name);
 			ValueEntry *e = vt.lookup(func_value->getName());
 			map<string, llvm::Value*> refs = e->refs;
@@ -683,17 +685,24 @@ public:
 		ValueEntry *e = vt.lookup(var);
 		v = e->val;
 		if (e->alloc){
+			// cout << "yes alloc " << var << " " << e->call << endl;
 			llvm::Value *ret =  Builder.CreateLoad(v, var);
-			//TODO: not only getInt32PtrTy but i1 and i8 too
-			if (ret->getType() == llvm::Type::getInt32PtrTy(TheContext)) return Builder.CreateLoad(ret, var);
+			if (e->call == "ref"){
+				// cout << var << " " << e->call << endl;
+				return Builder.CreateLoad(ret, var);
+			}
 			return ret;
 		}
 		else {
-			if (v->getType() == llvm::Type::getInt32PtrTy(TheContext)) return Builder.CreateLoad(v, var);
+			// cout << "no alloc " << var << " " << e->call << endl;
+			if (e->call == "ref"){
+				// cout << var << " " << e->call << endl;
+				return Builder.CreateLoad(v, var);
+			}
 			return v;
 		}
 	}
-	virtual llvm::AllocaInst* compile_alloc() const override {
+	virtual llvm::Value* compile_alloc() const override {
 		string var = string(id);
 		ValueEntry *e = vt.lookup(var);
 		if (!e) return nullptr;
@@ -707,7 +716,7 @@ class String: public Atom, public Const {
 public:
 	String(const char* s): Const(s) {}
 	~String() {}
-	virtual llvm::AllocaInst* compile_alloc() const override {
+	virtual llvm::Value* compile_alloc() const override {
 		return nullptr;
 	}
 };
@@ -728,18 +737,26 @@ public:
 		expr->primTypeCheck(TYPE_int);
 	}
 	virtual llvm::Value* compile() const override {
-		llvm::Value *vexpr = expr->compile();
-		// thin wont work with 2d arrays -> compile_alloc return nullptr
-		llvm::Value *vatom = atom->compile_alloc();
-		llvm::Value *elem = Builder.CreateLoad(vatom, "arrayelem");
-		// llvm::PointerType *elemtype = elem->getType()
-		llvm::Value *v = Builder.CreateGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemtmp");
-		cout << "okay until here 2" << endl;
+		llvm::Value *v = Builder.CreateLoad(compile_alloc(), "elemval");
 		return v;
 	}
-	virtual llvm::AllocaInst* compile_alloc() const override {
-		llvm::Value *v = compile();
-		return nullptr;
+	virtual llvm::Value* compile_alloc() const override {
+		llvm::Value *vexpr = expr->compile();
+		llvm::Value *vatom = atom->compile_alloc();
+		// llvm::Value *elem = Builder.CreateLoad(vatom, "arrayelem");
+		// llvm::Value *v = Builder.CreateInBoundsGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemalloc");
+		llvm::Value *v = nullptr;
+		if (((vatom->getType())->getPointerElementType())->isArrayTy()){
+			 cout << "its array" << endl;
+			  v = Builder.CreateInBoundsGEP(vatom, {c32(0), vexpr}, "elemalloc");
+		}
+		if (((vatom->getType())->getPointerElementType())->isPointerTy()){
+			 cout << "its ptr" << endl;
+			 llvm::Value *elem = Builder.CreateLoad(vatom, "arrayelem");
+			 v = Builder.CreateInBoundsGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemalloc");
+		}
+
+		return v;
 	}
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
 		return compile();
@@ -786,13 +803,15 @@ public:
 			// etc i = new int[2]
 			// no store only memory allocation
 			llvm::AllocaInst *ral = expr->compile_alloc_mem(name);
-			vt.insert(name, ral);
+			vt.insert(name, ral, "no", Tarray);
+			llvm::Value *v = ral;
+			vt.insert(name, v);
 			return nullptr;
 		}
+
 		llvm::Value *rhs = expr->compile();
-		cout << "okay until here 1" << endl;
+		// lhs works for id but not for direct access yet.
 		llvm::Value *lhs = atom->compile_alloc();
-		cout << "okay until here" << endl;
 		if (!lhs) {
 			llvm::AllocaInst *al;
 			// is a parameter!
@@ -816,8 +835,23 @@ public:
 			}
 		}
 
+		if ((rhs->getType())->isArrayTy()){
+			// right side is a defined array
+			string rnme = expr->getId();
+			ValueEntry *re = vt.lookup(rnme);
+			llvm::Type* eltype = (rhs->getType())->getArrayElementType();
+			rhs = Builder.CreateBitCast(re->alloc, llvm::PointerType::getUnqual(eltype), "ptr");
+		}
+		else if ((rhs->getType())->isPointerTy()
+			&& ((rhs->getType())->getPointerElementType())->isArrayTy()) {
+				// right side is a new memory allocation
+				// cout << "its an ptr!" << endl;
+				llvm::Type* eltype = ((rhs->getType())->getPointerElementType())->getArrayElementType();
+				rhs = Builder.CreateBitCast(rhs, llvm::PointerType::getUnqual(eltype), "ptr");
+		}
 		if (!ref) Builder.CreateStore(rhs, lhs);
-		vt.insert(name, lhs);
+
+		if (e->type != Tarray) vt.insert(name, lhs);
 		if (e->call == "ref"){
 			string func_name = Builder.GetInsertBlock()->getParent()->getName();
 			ValueEntry *fe = vt.lookup(func_name);
@@ -911,7 +945,7 @@ public:
 		return ret;
 
 	}
-	virtual llvm::AllocaInst* compile_alloc() const override {
+	virtual llvm::Value* compile_alloc() const override {
 		return nullptr;
 	}
 private:
@@ -1429,11 +1463,10 @@ public:
 		else if (type.p == TYPE_char)
 			 vtype = i8;
 		else if (type.c->getId() == "array") {
-			// vt.insert(name, nullptr, "array");
-
 			return nullptr;
 		}
 		else if (type.c->getId() == "list") {
+			llvm::AllocaInst *ListAlloc = Builder.CreateAlloca(type.c->getType(), nullptr, string(i));
 			return nullptr;
 		}
 		// else continue;
