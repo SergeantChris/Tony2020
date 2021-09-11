@@ -52,17 +52,6 @@ public:
 	}
 };
 
-// inline PrimitiveType getPrimType(Type t) {
-// 	switch(t.p) {
-// 		case TYPE_int: return TYPE_int;
-// 		case TYPE_bool: return TYPE_bool;
-// 		case TYPE_char: return TYPE_char;
-// 		case TYPE_str: return TYPE_str;
-// 		case TYPE_null: return TYPE_null;
-// 		default: break; // it means it is a CompositeType
-// 	}
-// 	return getPrimType((t.c)->getType());
-// }
 inline bool isPrimitive(Type t) {
 	bool prim_fault = false;
 	switch(t.p) {
@@ -748,11 +737,9 @@ public:
 		// llvm::Value *v = Builder.CreateInBoundsGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemalloc");
 		llvm::Value *v = nullptr;
 		if (((vatom->getType())->getPointerElementType())->isArrayTy()){
-			 cout << "its array" << endl;
 			  v = Builder.CreateInBoundsGEP(vatom, {c32(0), vexpr}, "elemalloc");
 		}
 		if (((vatom->getType())->getPointerElementType())->isPointerTy()){
-			 cout << "its ptr" << endl;
 			 llvm::Value *elem = Builder.CreateLoad(vatom, "arrayelem");
 			 v = Builder.CreateInBoundsGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemalloc");
 		}
@@ -1269,6 +1256,20 @@ public:
 		if(vt.EmptyScopes()){
 			vt.openScope();
 			vt.insert("puti",Puti);
+			vt.insert("putb",Putb);
+			vt.insert("putc",Putc);
+			vt.insert("puts",Puts);
+			vt.insert("geti",Geti);
+			vt.insert("getb",Getb);
+			vt.insert("getc",Getc);
+			vt.insert("gets",Gets);
+			vt.insert("abs",Abs);
+			vt.insert("ord",Ord);
+			vt.insert("chr",Chr);
+			vt.insert("strlen",Strlen);
+			vt.insert("strcmp",Strcmp);
+			vt.insert("strcpy",Strcpy);
+			vt.insert("strcat",Strcat);
 			main = true;
 		}
 		llvm::Type *func_type;
