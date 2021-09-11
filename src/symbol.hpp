@@ -7,6 +7,7 @@
 #include "ast.hpp"
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/DerivedTypes.h>
 
 using namespace std;
 

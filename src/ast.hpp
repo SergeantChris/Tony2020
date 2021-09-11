@@ -16,6 +16,7 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
+#include <llvm/IR/DerivedTypes.h>
 
 using namespace std;
 
@@ -1431,6 +1432,7 @@ private:
 	Header* hd;
 };
 
+
 class VarDef: public Def {
 public:
 	VarDef(Type t, vector<const char*>* i): type(t), idl(i) {}
@@ -1454,6 +1456,20 @@ public:
 			st.insert(string(i), type);
 		}
 	}
+	llvm::Type* defineListType(Type t) const {
+		switch (t.p) {
+			case TYPE_int: return i32;
+			case TYPE_bool: return i1;
+			case TYPE_char: return i8;
+			default: break;
+		}
+		if (t.c->getId() == "array"){
+			return llvm::PointerType::getUnqual(defineListType(t.c->getType()));
+		}
+		if (t.c->getId() == "array"){
+			return llvm::VectorType::get(defineListType(t.c->getType()), 1, 1);
+		}
+	}
 	virtual llvm::Value* compile() const override {
 		llvm::Type *vtype;
 		if (type.p == TYPE_int)
@@ -1466,8 +1482,7 @@ public:
 			return nullptr;
 		}
 		else if (type.c->getId() == "list") {
-			llvm::AllocaInst *ListAlloc = Builder.CreateAlloca(type.c->getType(), nullptr, string(i));
-			return nullptr;
+			vtype = llvm::VectorType::get(defineListType(type.c->getType()), 1, 1);
 		}
 		// else continue;
 		for(const char* i: *idl){
