@@ -1268,6 +1268,7 @@ public:
 		if (func_name == "main") func_name = "jackthecutestdoggo";
 		if(vt.EmptyScopes()){
 			vt.openScope();
+			vt.insert("puti",Puti);
 			main = true;
 		}
 		llvm::Type *func_type;
