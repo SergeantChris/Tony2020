@@ -119,10 +119,10 @@ program:
 		st.openScope();
 		Library *l = new Library();
 		l->init(); // Initialize all built in functions and procedures
-		st.closeScope();
+		$1->sem();
+		st.closeScope(); */
 
-		$1->sem(); */
-
+		cout << endl << "------------------------------------------------------- LLVM --------------------------------------------------------" << std::endl;
 		$1->llvm_compile_and_dump(opt_flag);
 		delete $1;
 

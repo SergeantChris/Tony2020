@@ -999,7 +999,7 @@ public:
 	virtual void sem() override {
 		cout << "INSIDE SEM for Branch" << endl;
 		condition->sem();
-		cout << condition->getType() << endl;
+		// cout << condition->getType() << endl;
 		condition->primTypeCheck(TYPE_bool);
 		for(shared_ptr<Stmt> s: *cond_true) s->sem();
 		if(!((*elsif_branches).empty())) {
