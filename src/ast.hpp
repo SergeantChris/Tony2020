@@ -928,6 +928,9 @@ public:
 		call->sem();
 		type = call->getType();
 	}
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override {
+		return compile();
+	}
 	virtual llvm::Value* compile() const override {
 		llvm::Value *ret =  call->compile();
 		return ret;

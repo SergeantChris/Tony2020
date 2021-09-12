@@ -12,7 +12,7 @@ def main ():
     elsif n mod 2 = 0: return false
     else:
       for i := 3; i <= n / 2; i := i + 2:
-				put(i)
+				puti(i)
         if n mod i = 0: return false end
       end
       return true
@@ -25,7 +25,7 @@ def main ():
   counter := 10
 	c := prime?(counter)
 	%geti()
-	putb(c)
+	putb(prime?(counter))
 	%puts("/n")
 	%strlen("Ciao")
 	c := prime?(9)
