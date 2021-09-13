@@ -1468,7 +1468,7 @@ public:
 		if (t.c->getId() == "array"){
 			return llvm::PointerType::getUnqual(defineListType(t.c->getType()));
 		}
-		if (t.c->getId() == "array"){
+		if (t.c->getId() == "list"){
 			return llvm::VectorType::get(defineListType(t.c->getType()), 1, 1);
 		}
 	}
