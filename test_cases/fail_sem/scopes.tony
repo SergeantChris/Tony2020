@@ -1,0 +1,8 @@
+def main():
+	def proc():
+		int i
+		i := 5
+		puti(i)
+	end
+	puti(i)
+end

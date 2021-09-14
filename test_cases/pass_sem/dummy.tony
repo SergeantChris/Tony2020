@@ -1,0 +1,13 @@
+def main():
+	char a
+	bool c
+	list[char] l
+	def bool newfunc():
+		bool a
+		a := true
+		return a
+	end
+	a := 'a'
+	c := newfunc()
+	l := a # nil
+end
