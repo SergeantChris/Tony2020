@@ -575,25 +575,27 @@ void Header::sem(bool func) {
 			else {
 				if (!(e->type == type)) error("Mismatch in function definition");
 				vector<Formal*>* decl_params = e->params;
-				int i=0;
-				for(Formal* f_def: *params) {
-					Formal* f_decl = decl_params->at(i);
-					ostringstream formatted;
-					if(!(f_def->getType() == f_decl->getType())) {
-						formatted << "Mismatch in arg type at position " << i;
-						error(formatted.str());
-					}
-					if(strcmp(f_def->getIds()->at(0), f_decl->getIds()->at(0))) {
-						formatted << "Mismatch in arg id at position " << i;
-						error(formatted.str());
-					}
-					if(f_def->getCb() != f_decl->getCb()) {
-						formatted << "Mismatch in arg call by method at position " << i;
-						error(formatted.str());
-					}
-					i++;
+				if(decl_params != nullptr) {
+					int i=0;
+					for(Formal* f_def: *params) {
+						Formal* f_decl = decl_params->at(i);
+						ostringstream formatted;
+						if(!(f_def->getType() == f_decl->getType())) {
+							formatted << "Mismatch in arg type at position " << i;
+							error(formatted.str());
+						}
+						if(strcmp(f_def->getIds()->at(0), f_decl->getIds()->at(0))) {
+							formatted << "Mismatch in arg id at position " << i;
+							error(formatted.str());
+						}
+						if(f_def->getCb() != f_decl->getCb()) {
+							formatted << "Mismatch in arg call by method at position " << i;
+							error(formatted.str());
+						}
+						i++;
+					} // checks if types, names, and callbys are the same as decl
 				}
-			} // checks if types, names, and callbys are the same as decl
+			} 
 		}
 	}
 	st.openScope();
