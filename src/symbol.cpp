@@ -9,9 +9,9 @@
 using namespace std;
 
 
-SymbolEntry::SymbolEntry() {} // was this supposed to be destructor
+SymbolEntry::SymbolEntry() {}
 
-SymbolEntry::SymbolEntry(Type t, int ofs, string fr, vector<Formal*>* v): type(t), offset(ofs), from(fr), params(v) {} // inits for var
+SymbolEntry::SymbolEntry(Type t, int ofs, string fr, vector<Formal*>* v): type(t), offset(ofs), from(fr), params(v) {}
 
 
 ostream& operator<<(ostream &out, const SymbolEntry e) {
@@ -75,9 +75,8 @@ SymbolEntry* SymbolTable::lookup(string c, string def) {
   }
   if (def != "func_decl") {
   	ostringstream formatted;
-  	formatted << "Entry " << c << " not found"; // when ??
+  	formatted << "Entry " << c << " not found";
   	error(formatted.str());
-  	// error("Entry %s not found", c);
   }
   return nullptr;
 }

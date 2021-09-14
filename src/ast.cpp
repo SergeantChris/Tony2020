@@ -155,7 +155,7 @@ void Expr::typeCheck(CompositeType* c1, CompositeType* c2) { // overloading for 
 	if(!(type == t1) && !(type == t2)){
 		cout << endl;
 		ostringstream formatted;
-		formatted << "Type " << type << "unsubscriptable";
+		formatted << "Type mismatch, expected " << c1->getId() << " or " << c2->getId() << " kind of type, but " << type << " was used";
 		error(formatted.str());
 	}
 	#if PRE_DEBUG
@@ -284,7 +284,6 @@ void MemoryAlloc::sem() {
 
 
 Atom::~Atom() {}
-const char* Atom::getId() {return "";} // WHY
 
 
 Id::Id(const char* i): id(i) {}
@@ -296,17 +295,10 @@ const char* Id::getId() {
 	return id;
 }
 void Id::sem() {
-	cout << "Searching for: " << id << " ... ";
+	cout << "Searching for: " << id << " ..." << endl;
 	SymbolEntry *e = st.lookup(string(id));
-	if(e != nullptr) {
-		cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
-		type = e->type;
-	}
-	else { // WUT THE FUCK IS HAPPENING HERE
-		Type t;
-		t.p = TYPE_nil;
-		type = t;
-	}
+	cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
+	type = e->type;
 }
 
 
@@ -373,7 +365,7 @@ void Call::printNode(ostream &out) const {
 	out << ")";
 }
 void Call::sem() {
-	// check if the function is defined
+	// checks if the function is defined
 	cout << "Looking up for definition of the function ..." << endl;
 	SymbolEntry *func = st.lookup(string(id), "func_def");
 	vector<Formal*>* params = func->params;
@@ -382,7 +374,7 @@ void Call::sem() {
 	if(exprList != nullptr) {
 		if(params != nullptr) {
 			if(params->size() == exprList->size()) {
-				// we have to check if the function's arguments are the same type as the exprList (one by one)
+				// checks if the function's arguments are the same type as the exprList (one by one)
 				int i = 0;
 				for(shared_ptr<Expr> e: *exprList) {
 					e->sem();
@@ -515,7 +507,7 @@ void Formal::printNode(ostream &out) const {
 }
 void Formal::sem() {
 	for(const char* i: *idl) {
-		// save each var into the SymbolTable in the scope of the function
+		// saves each var into the SymbolTable in the scope of the function
 		st.insert(string(i), type);
 	}
 }
@@ -601,7 +593,7 @@ void Header::sem(bool func) {
 					}
 					i++;
 				}
-			} // check if the parameters and the type are the same
+			} // checks if types, names, and callbys are the same as decl
 		}
 	}
 	st.openScope();
@@ -655,7 +647,6 @@ void FuncDecl::sem() {
 	hd->sem(false);
 	cout << "--- Closing scope!" << endl;
 	st.closeScope();
-	// check for same names with def!
 }
 
 

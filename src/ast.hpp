@@ -57,7 +57,6 @@ ostream& operator<<(ostream &out, const ASTnode &n);
 class Expr: public ASTnode { //abstract class
 public:
 	virtual ~Expr();
-	// TODO: there is a problem here...it never reaches the override function inside const when the caller is not const i.e. Op
 
 	void typeCheck(Type t);
 	void typeCheck(PrimitiveType p);
@@ -126,7 +125,6 @@ private:
 class Atom: virtual public Expr { //abstract class
 public:
 	virtual ~Atom();
-	virtual const char* getId();
 };
 
 class Id: public Atom {
@@ -134,8 +132,8 @@ public:
 	Id(const char* i);
 	~Id();
 	virtual void printNode(ostream &out) const override;
-	const char* getId() override;
 	virtual void sem() override;
+	const char* getId();
 private:
 	const char* id;
 };

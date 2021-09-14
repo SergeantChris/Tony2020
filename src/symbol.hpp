@@ -8,7 +8,6 @@
 #include "ast.hpp"
 #include "type.hpp"
 
-
 using namespace std;
 
 
@@ -18,12 +17,12 @@ struct SymbolEntry {
   Type type;
   int offset;
 	string from; // "var" or "func_def" of "func_decl"
-	vector<Formal*>* params; // vector with the the parameters - in func_decl
+	vector<Formal*>* params; // vector with the parameters - in func_decl
   SymbolEntry();
-  SymbolEntry(Type t, int ofs, string fr = "var", vector<Formal*>* v = nullptr);
+  SymbolEntry(Type t, int ofs, string fr = "var", vector<Formal*>* v = nullptr); // inits for var
 };
 
-ostream& operator<<(ostream &out, const Type t); //fwd declaration?
+ostream& operator<<(ostream &out, const Type t);
 
 ostream& operator<<(ostream &out, const SymbolEntry e);
 
