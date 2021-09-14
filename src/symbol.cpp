@@ -37,16 +37,29 @@ SymbolEntry* Scope::lookup(string c, string def) {
 	}
 }
 void Scope::insert(string c, Type t, string def, vector<Formal*>* v) {
+	ostringstream formatted;
 	if (def == "var"){
-		if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
-		if (funcs.find(c) != funcs.end()) error("Duplicate id: %s", c);
+		if (locals.find(c) != locals.end()) {
+			formatted << "Duplicate variable: " << c;
+			error(formatted.str());
+		}
+		if (funcs.find(c) != funcs.end()) {
+			formatted << "Duplicate id: " << c;
+			error(formatted.str());
+		}
 		cout << "Inserting Var: " << c << " into locals" << endl;
 		locals[c] = SymbolEntry(t, offset++);
     ++size;
 	}
 	else {
-		if (funcs.find(c) != funcs.end()) error("Duplicate function name: %s", c);
-		if (locals.find(c) != locals.end()) error("Duplicate id: %s", c);
+		if (funcs.find(c) != funcs.end()) {
+			formatted << "Duplicate function name: " << c;
+			error(formatted.str());
+		}
+		if (locals.find(c) != locals.end()) {
+			formatted << "Duplicate id: " << c;
+			error(formatted.str());
+		}
 		cout << "Inserting Fun: " << c << " into funcs" << endl;
 		funcs[c] = SymbolEntry(t, offset++, def, v);
 		last_func = funcs[c];
