@@ -232,9 +232,13 @@ void PreOp::sem() {
 		expr->typeCheck(new List(TYPE_nil));
 		type.p = TYPE_bool;
 	}
-	else if(op == "head" || op == "tail" ) {
+	else if(op == "head") {
 		expr->typeCheck(new List(TYPE_nil));
 		type = ((expr->getType()).c)->getType();
+	}
+	else if(op == "tail") {
+		expr->typeCheck(new List(TYPE_nil));
+		type = expr->getType();
 	}
 }
 
