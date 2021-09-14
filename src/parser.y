@@ -122,13 +122,11 @@ program:
 		$1->sem();
 		st.closeScope();
 		/* $1->llvm_compile_and_dump(opt_flag); */
-		return 0;
 	}
 ;
 
 func_def:
   "def" header ':' func_list stmt_list "end"  { $$ = new FuncDef($2, $4, $5); }
-
 ;
 
 func_list:
@@ -306,6 +304,6 @@ int main(int argc, char* argv[]) {
   }
   yyin = f;
   int result = yyparse();
-  if (result == 0) printf("Success.\n");
+  cout << "Success." << endl;
   return result;
 }
