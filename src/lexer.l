@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <sstream>
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
@@ -61,11 +62,11 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 
 {letter}({letter}|{digit}|_|\?)*	{ yylval.cstr = strdup(yytext); return T_id; }
 {digit}+							{ yylval.cint = atoi(yytext); return T_constInt; }
-\"([^\n\"\'\\]|{ESC})*\"			{ string s(yytext);
+\"([^\n\"\\]|{ESC})*\"				{ string s(yytext);
 									  string in = s.substr(1, s.size()-2);
 									  yylval.cstr = strdup(in.c_str());
 									  return T_string; }
-\'([^\"\'\\]|{ESC})\'				{ string s(yytext);
+\'([^\'\"\\]|{ESC})\'					{ string s(yytext);
 									  string in = s.substr(1, s.size()-2);
 									  if(strcmp(in.c_str(), "\0")) {
 									  	yylval.cchar = '\0'; // weird case here; does not take \0
@@ -93,7 +94,9 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 {W}+    							{ /* nothing */ }
 \n									{ linecount++; }
 
-.									{ error(" Lexical Error: unexpected token: %c. Exiting...\n",yytext[0]); }
+.									{ ostringstream formatted;
+									  formatted << "Lexical Error: unexpected token: " << strdup(yytext);
+									  error(formatted.str()); }
 %%
 
 void yyerror(const char *msg) {
