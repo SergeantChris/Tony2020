@@ -22,8 +22,6 @@ struct SymbolEntry {
   SymbolEntry(Type t, int ofs, string fr = "var", vector<Formal*>* v = nullptr); // inits for var
 };
 
-ostream& operator<<(ostream &out, const Type t);
-
 ostream& operator<<(ostream &out, const SymbolEntry e);
 
 class Scope {
