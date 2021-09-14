@@ -92,7 +92,7 @@ bool operator==(const Type &t1, const Type &t2) {
 			case TYPE_bool: res = (t2.p == TYPE_bool ? true : false); break;
 			case TYPE_char: res = (t2.p == TYPE_char ? true : false); break;
 			case TYPE_nil: res = (t2.p == TYPE_nil ? true : false); break;
-			case TYPE_void: res = (t2.p == TYPE_void ? true : false); break; // ret=true will never happen
+			case TYPE_void: res = (t2.p == TYPE_void ? true : false); break;
 		}
 		if(res) return true;
 	}
@@ -374,6 +374,7 @@ void Call::printNode(ostream &out) const {
 }
 void Call::sem() {
 	// check if the function is defined
+	cout << "Looking up for definition of the function ..." << endl;
 	SymbolEntry *func = st.lookup(string(id), "func_def");
 	vector<Formal*>* params = func->params;
 	type = func->type;
@@ -557,7 +558,7 @@ void Header::printNode(ostream &out) const {
 }
 void Header::sem(bool func) {
 	if (!st.EmptyScopes()){
-		cout << "Looking up for declaration of the function... ";
+		cout << "Looking up for declaration of the function ... " << endl;
 		SymbolEntry *e = st.lookup(id, "func_decl");
 		vector<Formal*>* params;
 		if(fl != nullptr) {
@@ -687,6 +688,8 @@ void Library::init() {
 	Type variable_type;
 	Type varh_t;
 
+	bool built_in = true;
+
 	// insert(name, returnType, "func_decl", vector<Formal*>* params)
 
 	// void puti(int n)
@@ -697,7 +700,7 @@ void Library::init() {
 	return_type.p = TYPE_void;
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("puti", return_type, "func_decl", params);
+	st.insert("puti", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("n", variable_type);
@@ -711,7 +714,7 @@ void Library::init() {
 	return_type.p = TYPE_void;
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("putb", return_type, "func_decl", params);
+	st.insert("putb", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("b", variable_type);
@@ -725,7 +728,7 @@ void Library::init() {
 	return_type.p = TYPE_void;
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("putc", return_type, "func_decl", params);
+	st.insert("putc", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("c", variable_type);
@@ -739,7 +742,7 @@ void Library::init() {
 	return_type.p = TYPE_void;
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("puts", return_type, "func_decl", params);
+	st.insert("puts", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("s", variable_type);
@@ -747,21 +750,21 @@ void Library::init() {
 
 	// int geti()
 	return_type.p = TYPE_int;
-	st.insert("geti", return_type, "func_decl", nullptr);
+	st.insert("geti", return_type, "func_decl", nullptr, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.closeScope(); cout << "--- Closing scope!" << endl;
 
 	// bool getb()
 	return_type.p = TYPE_bool;
-	st.insert("getb", return_type, "func_decl", nullptr);
+	st.insert("getb", return_type, "func_decl", nullptr, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.closeScope(); cout << "--- Closing scope!" << endl;
 
 	// char getc()
 	return_type.p = TYPE_char;
-	st.insert("getc", return_type, "func_decl", nullptr);
+	st.insert("getc", return_type, "func_decl", nullptr, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.closeScope(); cout << "--- Closing scope!" << endl;
@@ -781,7 +784,7 @@ void Library::init() {
 	params->push_back(new Formal(variable_type, id_list, "ref")); // TODO: not sure if ref is true
 
 	return_type.p = TYPE_void;
-	st.insert("gets", return_type, "func_decl", params);
+	st.insert("gets", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	variable_type.p = TYPE_int;
@@ -799,7 +802,7 @@ void Library::init() {
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("abs", return_type, "func_decl", params);
+	st.insert("abs", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("n", variable_type);
@@ -813,7 +816,7 @@ void Library::init() {
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("ord", return_type, "func_decl", params);
+	st.insert("ord", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("c", variable_type);
@@ -827,7 +830,7 @@ void Library::init() {
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	return_type.p = TYPE_char;
-	st.insert("chr", return_type, "func_decl", params);
+	st.insert("chr", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("n", variable_type);
@@ -841,7 +844,7 @@ void Library::init() {
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("strlen", return_type, "func_decl", params);
+	st.insert("strlen", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("s", variable_type);
@@ -856,7 +859,7 @@ void Library::init() {
 
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("strcmp", return_type, "func_decl", params);
+	st.insert("strcmp", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("s1", variable_type);
@@ -872,7 +875,7 @@ void Library::init() {
 
 	params->push_back(new Formal(variable_type, id_list, "ref")); // TODO: not sure about ref
 	return_type.p = TYPE_void;
-	st.insert("strcpy", return_type, "func_decl", params);
+	st.insert("strcpy", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("trg", variable_type);
@@ -888,7 +891,7 @@ void Library::init() {
 
 	params->push_back(new Formal(variable_type, id_list, "ref")); // TODO: not sure about ref
 	return_type.p = TYPE_void;
-	st.insert("strcat", return_type, "func_decl", params);
+	st.insert("strcat", return_type, "func_decl", params, built_in);
 
 	st.openScope(); cout << "+++ Opening new scope!" << endl;
 	st.insert("trg", variable_type);

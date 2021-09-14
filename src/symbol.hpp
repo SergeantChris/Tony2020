@@ -48,7 +48,7 @@ public:
   void openScope();
   void closeScope();
   SymbolEntry * lookup(string c, string def = "var");
-  void insert(string c, Type t, string def = "var", vector<Formal*>* v = nullptr);
+  void insert(string c, Type t, string def = "var", vector<Formal*>* v = nullptr, bool built_in = false);
   int getSizeOfCurrentScope() const;
 	Type getReturnType() const;
 	bool EmptyScopes() const;

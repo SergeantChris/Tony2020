@@ -4,6 +4,7 @@
 #include <sstream>
 #include "ast.hpp"
 #include "symbol.hpp"
+#include "type.hpp"
 
 using namespace std;
 
@@ -74,13 +75,22 @@ SymbolEntry* SymbolTable::lookup(string c, string def) {
   }
   if (def != "func_decl") {
   	ostringstream formatted;
-  	formatted << "Entry " << c << " not found";
+  	formatted << "Entry " << c << " not found"; // when ??
   	error(formatted.str());
   	// error("Entry %s not found", c);
   }
   return nullptr;
 }
-void SymbolTable::insert(string c, Type t, string def, vector<Formal*>* v) {
+void SymbolTable::insert(string c, Type t, string def, vector<Formal*>* v, bool built_in) {
+	if(def!="var" && !built_in && scopes.size()==1) {
+		Type main_type;
+		main_type.p = TYPE_void;
+		if(!(t == main_type) || v!=nullptr) {
+			ostringstream formatted;
+			formatted << "Program's main function " << c << " must take no arguments and return no value";
+			error(formatted.str());
+		}
+	}
   scopes.back().insert(c, t, def, v);
 }
 int SymbolTable::getSizeOfCurrentScope() const {
