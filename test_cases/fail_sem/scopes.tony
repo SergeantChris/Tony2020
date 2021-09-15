@@ -1,8 +1,41 @@
 def main():
-	def proc():
+	char i
+	list[int] a
+	list[int] [] b
+	list[int[]] o
+	int[] k
+	int lalala
+	decl int proc()
+	decl int[] proc2()
+	def int proc():
 		int i
+		def unnec():
+			puti(i)
+		end
 		i := 5
-		puti(i)
+		unnec()
+		proc2()
 	end
-	puti(i)
+	def int[] proc2():
+		proc()
+		return new int[5]
+	end
+	def test(ref int[] a):
+		skip
+	end
+	k[0] := 5 %problem for codegen
+	i := 'e'
+	proc2()[0] := 5
+	%proc() := 5
+	%puti(i)
+	%main() % must not allow this! flag in main st insert
+	a := 4#5#nil
+	if(head(a) = 4):
+		puts("nia")
+	end
+	%a[0] := 4
+	b[0] := 5#4#nil
+	%o[0][0] := 5
+	lalala := 5
+	test(new int[10])
 end
