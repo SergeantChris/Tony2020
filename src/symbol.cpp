@@ -53,8 +53,10 @@ void Scope::insert(string c, Type t, string def, vector<Formal*>* v) {
 	}
 	else {
 		if (funcs.find(c) != funcs.end()) {
-			formatted << "Duplicate function name: " << c;
-			error(formatted.str());
+			if(!(def == "func_def") || !(funcs[c].from == "func_decl")) {
+				formatted << "Duplicate function name: " << c;
+				error(formatted.str());
+			}
 		}
 		if (locals.find(c) != locals.end()) {
 			formatted << "Duplicate id: " << c;

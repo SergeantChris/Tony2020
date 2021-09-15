@@ -620,7 +620,7 @@ void Header::sem(bool func) {
 		else {
 			string def = e->from;
 			if ((def == "func_def") && func) error("Duplicate function definition");
-			if ((def == "func_decl") && !func) error("Duplicate function declaration");
+			else if (!func) error("Duplicate function declaration");
 			else {
 				if (!(e->type == type)) error("Mismatch in function definition");
 				vector<Formal*>* decl_params = e->params;
@@ -644,6 +644,7 @@ void Header::sem(bool func) {
 						i++;
 					} // checks if types, names, and callbys are the same as decl
 				}
+				st.insert(string(id), type, "func_def", params);
 			} 
 		}
 	}
