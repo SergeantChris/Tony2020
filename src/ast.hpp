@@ -141,6 +141,7 @@ public:
     i8 = llvm::IntegerType::get(TheContext, 8);
     i32 = llvm::IntegerType::get(TheContext, 32);
     i64 = llvm::IntegerType::get(TheContext, 64);
+		// i32ptr = llvm::PointerType::getUnqual(i32);
 
 /*
  * ------------------------------------- Initialize Library Functions -------------------------------------
@@ -430,8 +431,9 @@ public:
 			case(TC_int): return c32(tc.integer);
 			case(TC_char): return c8(tc.character);
 			case(TC_bool): return c1(tc.boolean);
-			case(TC_nil): return nullptr;
-			case(TC_str): return nullptr;		// because c++ gives warning
+			// not only i32 but whatever type the list is
+			case(TC_nil): return llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(i32));
+			case(TC_str): return nullptr;		// TODO: do smth
 		}
     return nullptr;
 	}
@@ -444,7 +446,6 @@ private:
 		char character;
 		const char* str; //cannot be string
 		bool boolean;
-		// std::vector<int> list; ; //weird list thing for nil TODO: dont know if correct but gives error
 	};
 	TC tc;
 	enum TC_active { TC_int, TC_char, TC_str, TC_bool, TC_nil };
@@ -483,13 +484,37 @@ public:
 		if (op == "+") return val;
 		else if (op == "-") return Builder.CreateNeg(val, "negsign");
 		else if (op == "not") return Builder.CreateNot(val, "nottmp");
-		else if (op == "nil?") return nullptr;// check if the list is empty and return the Value
-		else if (op == "head") return nullptr;// return the first value of the List
-		else if(op == "tail") return nullptr;//return the last value of the list
+		else if (op == "nil?") {
+			llvm::Type *list_type = (val->getType())->getPointerElementType();
+			return Builder.CreateICmpEQ(val, llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(list_type)), "nil?");
+		}
+		else if (op == "head"){
+			string lname = expr->getId();
+			if (lname == "_ithasnoid") lname = val->getName();
+			// string lname = expr->getId();
+			string sname = lname + "_size";
+			ValueEntry *e = vt.lookup(sname);
+			int lsize = e->lsize;
+		  llvm::Value *retval = Builder.CreateInBoundsGEP((val->getType())->getPointerElementType(), val,  c32(lsize - 1), "head");// return the first value of the List
+			return Builder.CreateLoad(retval, "headval");
+		 }
+		else if(op == "tail") {
+			string lname = expr->getId();
+			string sname = lname + "_size";
+			ValueEntry *e = vt.lookup(sname);
+			int lsize = e->lsize;
+			lsize--;
+			string valname = val->getName();
+			vt.insert(valname + "_size", lsize);
+			return val; //return the last value of the list
+		}
 		else return nullptr;
 	}
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
 		return compile();
+	}
+	const char* getId() override {
+		return "_ithasnoid";
 	}
 private:
 	string op;
@@ -539,7 +564,37 @@ public:
     else if (op == "mod") return Builder.CreateSRem(l, r, "modtmp");
 		else if (op == "and") return Builder.CreateAnd(l, r, "andtmp");
 		else if (op == "or") return Builder.CreateOr(l, r, "ortmp");
-		else if (op == "#") return nullptr; //adds to the list
+		else if (op == "#"){
+			llvm::Type *seed_type = l->getType();
+			// l is the seed and r is the list
+			// we have 3 cases
+			// else if r is not the const nil but has been allocated but is not lhs =>
+			// size_lhs = size_r + 1
+			if (r == llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(i32))){
+				//if r is nil => lhs has one elem and size 1
+				llvm::AllocaInst *retalloc = Builder.CreateAlloca(llvm::PointerType::getUnqual(seed_type), nullptr, "tmplistalloc");
+				retalloc->setAlignment(8);
+				llvm::Value *retval = Builder.CreateLoad(retalloc, "tmplistval");
+				llvm::Value *elem = Builder.CreateInBoundsGEP(seed_type, retval,  c32(0), "lelalloc");
+				Builder.CreateStore(l, elem);
+				// size = 1
+				string sname = (string)retval->getName() + "_size";
+				vt.insert(sname, 1);
+				return retval;
+			}
+			// else if r is the same as lhs => size++ nad put at the end the l
+			string lname = expr2->getId();
+			if (lname == "_ithasnoid") lname = r->getName();
+			string sname = lname + "_size";
+			ValueEntry *e = vt.lookup(sname);
+			int lsize = e->lsize;
+			llvm::Value *v = Builder.CreateInBoundsGEP(seed_type, r,  c32(lsize), "lelalloc");
+			Builder.CreateStore(l, v);
+			// not always!
+			string sname_load = (string)r->getName() + "_size";
+			vt.insert(sname_load, lsize+1);
+			return r;
+		}
 		else if (op == "=") return Builder.CreateICmpEQ(l, r, "eqtmp");
 		else if (op == "<>") return Builder.CreateICmpNE(l, r, "netmp");
 		else if (op == "<") return Builder.CreateICmpSLT(l, r, "slttmp");
@@ -550,6 +605,9 @@ public:
 	}
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
 		return compile();
+	}
+	const char* getId() override {
+		return "_ithasnoid";
 	}
 private:
 	string op;
@@ -577,26 +635,16 @@ public:
 		return compile_alloc_mem();
 	}
 	llvm::Type* defineArrayType(Type t) const{
-		// switch (t.p) {
-		// 	case TYPE_int: return i32;
-		// 	case TYPE_bool: return i1;
-		// 	case TYPE_char: return i8;
-		// 	default: break;
-		// }
-		// if (t.c->getId() == "array"){
-		// 	// σιζε???
-		// 	return llvm::ArrayType::get(defineArrayType(t.c->getType()), 1);
-		// }
 		switch (t.p) {
 			case TYPE_int: return llvm::Type::getInt32PtrTy(TheContext);
 			case TYPE_bool: return llvm::Type::getInt1PtrTy(TheContext);
 			case TYPE_char: return llvm::Type::getInt8PtrTy(TheContext);
 			default: break;
 		}
-		if (t.c->getId() == "array"){
+		if (t.c->getId() == "array" ){
 			return llvm::PointerType::getUnqual(defineArrayType(t.c->getType()));
 		}
-		return nullptr;
+		return llvm::PointerType::getUnqual(defineArrayType(t.c->getType()));
 	}
 	virtual llvm::AllocaInst* compile_alloc_mem(string name = "tmparray") const override {
 		//type = array(new_type)
@@ -783,6 +831,7 @@ public:
 		// TODO: we also have to check what atom is...
 		// for example it cant be string or call??
 	}
+
 	virtual llvm::Value* compile() const override {
 		bool ref = 0;
 		string name = string(atom->getId());
@@ -821,6 +870,22 @@ public:
 				Builder.CreateStore(rhs, ptr);
 				ref = 1;
 			}
+		}
+		if (rhs == llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(i32)) &&
+					e->type == Tlist)
+		{
+			// assign nil to list
+			llvm::Type *list_type = (lhs->getType())->getPointerElementType()->getPointerElementType();
+			rhs = llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(list_type));
+		}
+		else if (e->type == Tlist){
+			string rname = expr->getId();
+			if (rname == "_ithasnoid") rname = rhs->getName();
+			// string rname = rhs->getName();
+			cout << rname << endl;
+			ValueEntry *rse = vt.lookup(rname + "_size");
+			int rsize = rse->lsize;
+			vt.insert(name + "_size", rsize);
 		}
 
 		if ((rhs->getType())->isArrayTy()){
@@ -1468,14 +1533,12 @@ public:
 			case TYPE_char: return i8;
 			default: break;
 		}
-		if (t.c->getId() == "array"){
-			return llvm::PointerType::getUnqual(defineListType(t.c->getType()));
-		}
-		if (t.c->getId() == "list"){
-			return llvm::VectorType::get(defineListType(t.c->getType()), 1, 1);
-		}
+		// else is array or list
+		return llvm::PointerType::getUnqual(defineListType(t.c->getType()));
+
 	}
 	virtual llvm::Value* compile() const override {
+		bool isList = 0;
 		llvm::Type *vtype;
 		if (type.p == TYPE_int)
 			vtype = i32;
@@ -1487,14 +1550,26 @@ public:
 			return nullptr;
 		}
 		else if (type.c->getId() == "list") {
-			vtype = llvm::VectorType::get(defineListType(type.c->getType()), 1, 1);
+			isList = 1;
+			vtype = llvm::PointerType::getUnqual(defineListType(type.c->getType()));
 		}
 		// else continue;
 		for(const char* i: *idl){
 			string name = string(i);
 			llvm::AllocaInst *IdAlloc = Builder.CreateAlloca(vtype, nullptr, name);
-			IdAlloc->setAlignment(4);
-			vt.insert(name, IdAlloc);
+			if (isList){
+				IdAlloc->setAlignment(8);
+				vt.insert(name, IdAlloc, "no", Tlist);
+				// keep the size of the list in variable!
+				string sname = name + "_size";
+				// llvm::AllocaInst *SizeAlloc = Builder.CreateAlloca(i32, nullptr, sname);
+				// SizeAlloc->setAlignment(4);
+				vt.insert(sname, 0);
+			}
+			else {
+				IdAlloc->setAlignment(4);
+				vt.insert(name, IdAlloc);
+			}
 		}
 
 		return nullptr;

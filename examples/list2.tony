@@ -1,5 +1,23 @@
 def main ():
   int pivot, x
+  bool b
   list[int] lt, ge
+
   x := 0
+  lt := nil
+  ge := nil
+
+  b := nil?(nil)
+  lt := 23 # nil
+  lt := 27 # lt
+  ge := 76 # lt
+  x := head(ge)
+  x := head(lt)
+  lt := 32 # 72 # lt
+  x := head(lt)
+  ge := lt
+  x := head(ge)
+  ge := tail(lt)
+  x := head(ge)
+  x := head(tail(lt))
 end

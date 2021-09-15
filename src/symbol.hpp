@@ -136,11 +136,13 @@ struct ValueEntry {
 	llvm::Value *val;
 	llvm::Function *func;
 	llvm::AllocaInst *alloc;
+	int lsize; //size of a particular list
   int offset;
 	string call; // call by ref or val or not a parameter (default = no)
 	generalType type;
 	map<string, llvm::Value*> refs; // call by ref parameters
   ValueEntry() {}
+	ValueEntry(int s, int ofs) : lsize(s), offset(ofs) {}
   ValueEntry(llvm::Value *v, int ofs) : val(v), offset(ofs) {}
 	ValueEntry(llvm::Function *f, int ofs, map<string, llvm::Value*> r) : func(f), offset(ofs), refs(r) {}
 	ValueEntry(llvm::AllocaInst *a, int ofs, string c, generalType t) :
@@ -159,6 +161,13 @@ public:
   }
   void insert(string c, llvm::Value *v) {
 			defined[c].val = v;
+	}
+	void insert(string c, int s) {
+		if (defined.find(c) != defined.end()) defined[c].lsize = s;
+		else {
+			defined[c] = ValueEntry(s, offset++);
+	    ++size;
+		}
 	}
 	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs) {
 		if (defined.find(c) != defined.end())
@@ -205,6 +214,9 @@ public:
 			ValueEntry *e = i->lookup(c);
       if (e != nullptr) i->insert(c, v);
     }
+  }
+	void insert(string c, int lsize) {
+    scopes.back().insert(c, lsize);
   }
 	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs = {}) {
     scopes.back().insert(c, f, refs);
