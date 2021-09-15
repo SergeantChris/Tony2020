@@ -413,6 +413,11 @@ void Call::sem() {
 				for(shared_ptr<Expr> e: *exprList) {
 					e->sem();
 					e->typeCheck(params->at(i)->getType());
+					if(params->at(i)->getCb() == true) {
+						if((dynamic_cast<Atom*>(e.get()) == nullptr) || !(dynamic_cast<Atom*>(e.get())->isLVal())) {
+							error("Actual parameter has to be l-value when passing by reference");
+						}
+					}
 					i++;
 				}
 			}
