@@ -66,13 +66,18 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 									  string in = s.substr(1, s.size()-2);
 									  yylval.cstr = strdup(in.c_str());
 									  return T_string; }
-\'([^\'\"\\]|{ESC})\'					{ string s(yytext);
+\'([^\'\"\\]|{ESC})\'				{ string s(yytext);
 									  string in = s.substr(1, s.size()-2);
-									  if(strcmp(in.c_str(), "\0")) {
-									  	yylval.cchar = '\0'; // weird case here; does not take \0
-									  }
-									  else {
-									  	yylval.cchar = yytext[1];
+									  switch(yytext[2]) {
+										  case 'n': {yylval.cchar = '\n'; break;}
+										  case 't': {yylval.cchar = '\t'; break;}
+										  case 'r': {yylval.cchar = '\r'; break;}
+										  case '0': {yylval.cchar = '\0'; break;}
+										  case '\\': {yylval.cchar = '\\'; break;}
+										  case '\'': {yylval.cchar = '\''; break;}
+										  case '"': {yylval.cchar = '\"'; break;}
+										  case 'x': {string hex = in.substr(2, s.size()-1); yylval.cchar = stoi(hex, 0, 16); break;}
+										  default: {yylval.cchar = yytext[1]; break;}
 									  }
 									  return T_constChar; }
 
