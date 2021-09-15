@@ -3,3 +3,4 @@ src/parser.cpp
 src/parser.hpp
 src/parser.output
 src/*.o
+src/tony
