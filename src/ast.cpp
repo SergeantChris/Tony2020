@@ -429,6 +429,17 @@ void Return::sem() {
 		cout << "Checking return type ..." << endl;
 		ret_val->typeCheck(st.getReturnType());
 	}
+	else {
+		cout << "Checking return type ..." << endl;
+		Type rv_type;
+		rv_type.p = TYPE_void;
+		Type r_type = st.getReturnType();
+		if(!(r_type == rv_type)) {
+			ostringstream formatted;
+			formatted << "Function of return type " << r_type << " must return a value";
+			error(formatted.str());
+		}
+	}
 }
 
 
@@ -539,7 +550,6 @@ bool Formal::getCb() {
 Header::Header(const char* i, vector< Formal*>* f, Type t): id(i), fl(f) {
 	type = t;
 }
-Header::Header(const char* i, vector< Formal*>* f): id(i), fl(f) {}
 Header::~Header() { delete id; delete fl; }
 void Header::printNode(ostream &out) const {
 	out << "Header(" << id;
