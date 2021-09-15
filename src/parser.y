@@ -238,7 +238,7 @@ expr_list:
 
 atom:
 	T_id								{ $$ = new Id($1); }
-| T_string						{ cout << "String " << $1 << endl; $$ = new String($1); } // TODO: semcheck can we Assign to string atoms
+| T_string						{ $$ = new String($1); }
 | atom '[' expr ']'		{ $$ = new DirectAcc($1, $3); }
 | call								{ $$ = new ReturnValue($1); }
 ;
