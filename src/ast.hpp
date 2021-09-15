@@ -125,6 +125,7 @@ private:
 class Atom: virtual public Expr { //abstract class
 public:
 	virtual ~Atom();
+	virtual bool isLVal() const = 0;
 };
 
 class Id: public Atom {
@@ -133,6 +134,7 @@ public:
 	~Id();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
+	virtual bool isLVal() const override;
 	const char* getId();
 private:
 	const char* id;
@@ -142,6 +144,7 @@ class String: public Atom, public Const {
 public:
 	String(string s);
 	~String();
+	virtual bool isLVal() const override;
 };
 
 class DirectAcc: public Atom {
@@ -150,6 +153,7 @@ public:
 	~DirectAcc();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual bool isLVal() const override;
 private:
 	Atom* atom;
 	Expr* expr;
@@ -205,6 +209,7 @@ public:
 	~ReturnValue();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual bool isLVal() const override;
 
 private:
 	Call* call;

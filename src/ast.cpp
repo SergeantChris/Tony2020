@@ -187,7 +187,7 @@ Const::Const(string v, bool special) { // for boolean types and nil + string lit
 		}
 	}
 	else {
-		tc.str = strdup(v.c_str());
+		tc.str = strdup(v.c_str()); // must be c string so that it is null terminated as required by tony
 		tc_act = TC_str;
 	}
 }
@@ -294,6 +294,7 @@ void MemoryAlloc::sem() {
 
 
 Atom::~Atom() {}
+// bool Atom::isLVal();
 
 
 Id::Id(const char* i): id(i) {}
@@ -310,10 +311,12 @@ void Id::sem() {
 	cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
 	type = e->type;
 }
+bool Id::isLVal() const { return true;}
 
 
 String::String(string s): Const(s, 0) {}
 String::~String() {}
+bool String::isLVal() const { return false;}
 
 
 DirectAcc::DirectAcc(Atom* a, Expr* e): atom(a), expr(e) {}
@@ -327,6 +330,29 @@ void DirectAcc::sem() {
 	atom->typeCheck(new Array(TYPE_nil), new List(TYPE_nil));
 	expr->typeCheck(TYPE_int);
 	type = ((atom->getType()).c)->getType();
+}
+bool DirectAcc::isLVal() const { //complicated one
+	
+	Type not_mutable;
+	not_mutable.c = new List(TYPE_nil);
+
+	if(dynamic_cast<Id*>(atom) != nullptr) {
+		SymbolEntry *e = st.lookup(dynamic_cast<Id*>(atom)->getId());
+		Type id_type = e->type;
+		if(id_type == not_mutable) return false;
+		else return true;
+	}
+	else if(dynamic_cast<String*>(atom) != nullptr) {
+		return false;
+	}
+	else if(dynamic_cast<ReturnValue*>(atom) != nullptr) {
+		return true;
+	}
+	else {
+		Type inner_access_type = atom->getType();
+		return (!(inner_access_type == not_mutable) && atom->isLVal()); // inner access is not list, outer access is lval
+	}
+
 }
 
 
@@ -352,13 +378,11 @@ void Assign::sem() {
 	expr->sem();
 	atom->sem();
 	expr->typeCheck(atom->getType());
-
-	// acceptable: atom is id[index], where id is array/list of same type as expr
-	// if i dont check that id is defined in this scope, will blow up in the code generation stage
-	// (check is either call return id defined in this scope OR call return id was arg passed by ref)
-
-	// acceptable: atom is string[expr] because of papy comment http://moodle.softlab.ntua.gr/mod/forum/discuss.php?d=9839
-	// -> means that "test"[0]='e' will blow up in the code generation stage
+	if(!atom->isLVal()) {
+		ostringstream formatted;
+		formatted << "Cannot assign to " << *atom << ", not an l-value";
+		error(formatted.str());
+	}
 }
 
 
@@ -420,6 +444,7 @@ void ReturnValue::sem() {
 	call->sem();
 	type = call->getType();
 }
+bool ReturnValue::isLVal() const { return false;}
 
 
 Return::Return(Expr* v): ret_val(v) {}
