@@ -116,7 +116,7 @@ public:
 	MemoryAlloc(Type t, Expr* e);
 	~MemoryAlloc();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 private:
 	Type new_type;
 	Expr* expr;
@@ -152,7 +152,7 @@ public:
 	DirectAcc(Atom* a, Expr* e);
 	~DirectAcc();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 	virtual bool isLVal() const override;
 private:
 	Atom* atom;
@@ -174,7 +174,7 @@ public:
 	NoAction();
 	~NoAction();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 };
 
 class Assign: public Simple {
@@ -182,8 +182,7 @@ public:
 	Assign(Atom* a, Expr* e);
 	~Assign();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
-
+	virtual void sem() override;
 private:
 	Atom* atom;
 	Expr* expr;
@@ -194,9 +193,8 @@ public:
 	Call(const char* i, vector<shared_ptr<Expr>>* e = nullptr);
 	~Call();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 	Type getType();
-
 private:
 	const char* id;
 	vector<shared_ptr<Expr>>* exprList;
@@ -208,9 +206,8 @@ public:
 	ReturnValue(Call* c);
 	~ReturnValue();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 	virtual bool isLVal() const override;
-
 private:
 	Call* call;
 };
@@ -220,7 +217,7 @@ public:
 	Return(Expr* v = nullptr);
 	~Return();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 private:
 	Expr* ret_val;
 };
@@ -250,7 +247,6 @@ public:
 	~Loop();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
-
 private:
 	vector<shared_ptr<Simple>>* inits;
 	Expr* condition;
@@ -263,7 +259,7 @@ public:
 	Formal(Type t, vector<const char*>* i, string cb);
 	~Formal();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 	vector<Formal*>* getOpenedFormal();
 	Type getType();
 	vector<const char*>* getIds();
@@ -296,7 +292,7 @@ public:
 	FuncDef(Header* h, vector<shared_ptr<Def>>* d, vector<shared_ptr<Stmt>>* s);
 	~FuncDef();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 private:
 	Header* hd;
 	vector<shared_ptr<Def>>* defl;
@@ -309,7 +305,7 @@ public:
 	FuncDecl(Header* h);
 	~FuncDecl();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 private:
 	Header* hd;
 };
@@ -319,12 +315,11 @@ public:
 	VarDef(Type t, vector<const char*>* i);
 	~VarDef();
 	virtual void printNode(ostream &out) const override;
-	virtual void sem();
+	virtual void sem() override;
 private:
 	Type type;
 	vector<const char*>* idl;
 };
-
 
 class Library {
 public:

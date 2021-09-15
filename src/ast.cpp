@@ -294,7 +294,6 @@ void MemoryAlloc::sem() {
 
 
 Atom::~Atom() {}
-// bool Atom::isLVal();
 
 
 Id::Id(const char* i): id(i) {}
