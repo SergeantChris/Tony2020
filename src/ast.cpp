@@ -261,7 +261,13 @@ void Op::sem() {
 		type.c = new List(expr1->getType()); // because expr2->getType might still be null list
 	}
 	else if(op == "=" || op == "<>" || op == "<" || op == ">" || op == "<=" || op == ">=") {
-		expr2->typeCheck(expr1->getType());
+		Type type_1 = expr1->getType();
+		expr2->typeCheck(type_1);
+		if(!isPrimitive(type_1)) {
+			ostringstream formatted;
+			formatted << "Can only compare primitive type operands, type is " << type_1;
+			error(formatted.str());
+		}
 		type.p = TYPE_bool;
 	}
 	else if(op == "+" || op == "-" || op == "*" || op == "/" || op == "mod") {
