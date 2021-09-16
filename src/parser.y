@@ -74,7 +74,7 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 	vector<shared_ptr<Def>>* defl;
 	Header* h;
 	Formal* frml;
-	vector< Formal*>* fl;
+	vector<Formal*>* fl;
 	vector<const char*>* idl;
 	Type type;
 	Stmt* stmt;

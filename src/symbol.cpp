@@ -13,6 +13,8 @@ SymbolEntry::SymbolEntry() {}
 
 SymbolEntry::SymbolEntry(Type t, int ofs, string fr, vector<Formal*>* v): type(t), offset(ofs), from(fr), params(v) {}
 
+// SymbolEntry::~SymbolEntry() { delete params;} // would fix memory leak but leads to error free(): invalid pointer
+
 
 ostream& operator<<(ostream &out, const SymbolEntry e) {
 	out << "-/-/ SymbolEntry /-/- " << endl << " offset: " << e.offset << endl << " type: " <<  e.type << endl;

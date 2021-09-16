@@ -20,6 +20,7 @@ struct SymbolEntry {
 	vector<Formal*>* params; // vector with the parameters - in func_decl
   SymbolEntry();
   SymbolEntry(Type t, int ofs, string fr = "var", vector<Formal*>* v = nullptr); // inits for var
+  // ~SymbolEntry();
 };
 
 ostream& operator<<(ostream &out, const SymbolEntry e);
@@ -27,7 +28,7 @@ ostream& operator<<(ostream &out, const SymbolEntry e);
 class Scope {
 public:
   Scope(int ofs = -1);
-  SymbolEntry * lookup(string c, string def);
+  SymbolEntry* lookup(string c, string def);
   void insert(string c, Type t, string def, vector<Formal*>* v);
   int getSize() const;
   int getOffset() const;
@@ -44,13 +45,13 @@ class SymbolTable {
 public:
   void openScope();
   void closeScope();
-  SymbolEntry * lookup(string c, string def = "var");
+  SymbolEntry* lookup(string c, string def = "var");
   void insert(string c, Type t, string def = "var", vector<Formal*>* v = nullptr, bool built_in = false);
   int getSizeOfCurrentScope() const;
 	Type getReturnType() const;
 	bool EmptyScopes() const;
 private:
-  std::vector<Scope> scopes;
+  vector<Scope> scopes;
 };
 
 extern SymbolTable st;

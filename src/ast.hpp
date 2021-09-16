@@ -270,13 +270,13 @@ private:
 
 class Header: public ASTnode {
 public:
-	Header(const char* i, vector< Formal*>* f, Type t);
+	Header(const char* i, vector<Formal*>* f, Type t);
 	~Header();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem(bool func = true);
 private:
 	const char* id;
-	vector< Formal*>* fl;
+	vector<Formal*>* fl;
 	Type type;
 };
 

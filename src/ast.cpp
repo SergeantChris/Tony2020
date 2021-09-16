@@ -609,6 +609,7 @@ void Header::sem(bool func) {
 				for(Formal *f: *subformals) {
 					params->push_back(f);
 				}
+				delete subformals;
 			}
 		}
 		else params = nullptr;
