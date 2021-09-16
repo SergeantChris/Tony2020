@@ -100,13 +100,10 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 \n									{ linecount++; }
 
 .									{ ostringstream formatted;
-									  formatted << "Lexical Error: unexpected token: " << strdup(yytext);
+									  formatted << "Lexical Error: unexpected token: " << yytext;
 									  error(formatted.str()); }
 %%
 
 void yyerror(const char *msg) {
-	/* printf("Error at Line: %d\n", linecount); */
-	/* fprintf(stderr, "%s\n", msg); */
-  /* exit(1); */
 	error(msg);
 }

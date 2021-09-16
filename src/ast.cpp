@@ -13,8 +13,6 @@ using namespace std;
 #define PRE_DEBUG 1
 
 
-CompositeType::~CompositeType() {}
-
 string CompositeType::getId() {
 	return id;
 }
@@ -104,6 +102,7 @@ bool operator==(const Type &t1, const Type &t2) {
 
 
 ASTnode::~ASTnode() {}
+
 void ASTnode::sem() {}
 
 

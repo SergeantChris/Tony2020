@@ -17,7 +17,6 @@ using namespace std;
 
 class CompositeType { //abstract class
 public:
-	virtual ~CompositeType();
 	string getId();
 	Type getType();
 protected:
@@ -57,7 +56,6 @@ ostream& operator<<(ostream &out, const ASTnode &n);
 class Expr: public ASTnode { //abstract class
 public:
 	virtual ~Expr();
-
 	void typeCheck(Type t);
 	void typeCheck(PrimitiveType p);
 	void typeCheck(CompositeType* c);
@@ -68,7 +66,7 @@ protected:
   Type type;
 };
 
-class Const: public virtual Expr {
+class Const: virtual public Expr {
 public:
 	Const(int i);
 	Const(char c);
