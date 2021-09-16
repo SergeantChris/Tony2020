@@ -100,6 +100,16 @@ bool operator==(const Type &t1, const Type &t2) {
 	return false;
 }
 
+template <typename T>
+void del_entries(vector<T>* vec) {
+	if(vec != nullptr) {
+		for(T p: *vec) {
+			delete p;
+		}
+		vec->clear();
+	}
+}
+
 
 ASTnode::~ASTnode() {}
 
@@ -478,7 +488,7 @@ void Return::sem() {
 
 
 Branch::Branch(vector<shared_ptr<Stmt>>* ct, Expr* c, vector<Branch*>* eif, Branch* e): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
-Branch::~Branch() { delete cond_true; delete condition; delete elsif_branches; delete else_branch; }
+Branch::~Branch() { delete cond_true; delete condition; del_entries(elsif_branches); delete elsif_branches; delete else_branch; }
 void Branch::printNode(ostream &out) const {
 	out << "Branch(";
 	bool first = true;
@@ -489,7 +499,7 @@ void Branch::printNode(ostream &out) const {
 	}
 	out << ", " << *condition;
 	if(elsif_branches != nullptr) {
-		for(Branch *b: *elsif_branches) {
+		for(Branch* b: *elsif_branches) {
 			out << ", ";
 			out << *b;
 		}
@@ -502,7 +512,7 @@ void Branch::sem() {
 	condition->typeCheck(TYPE_bool);
 	for(shared_ptr<Stmt> s: *cond_true) s->sem();
 	if(elsif_branches != nullptr) {
-		for(Branch *b: *elsif_branches) b->sem();
+		for(Branch* b: *elsif_branches) b->sem();
 	}
 	if(else_branch != nullptr) else_branch->sem();
 }
@@ -584,12 +594,12 @@ bool Formal::getCb() {
 Header::Header(const char* i, vector< Formal*>* f, Type t): id(i), fl(f) {
 	type = t;
 }
-Header::~Header() { delete id; delete fl; }
+Header::~Header() { delete id; del_entries(fl); delete fl; }
 void Header::printNode(ostream &out) const {
 	out << "Header(" << id;
 	if(type.p != TYPE_void) out << ", " << type;
 	if(fl != nullptr) {
-		for(Formal *f: *fl) {
+		for(Formal* f: *fl) {
 			out << ", ";
 			out << *f;
 		}
@@ -603,10 +613,10 @@ void Header::sem(bool func) {
 		vector<Formal*>* params;
 		if(fl != nullptr) {
 			params = new vector<Formal*>;
-			for(Formal *f: *fl) {
+			for(Formal* f: *fl) {
 				vector<Formal*>* subformals;
 				subformals = f->getOpenedFormal();
-				for(Formal *f: *subformals) {
+				for(Formal* f: *subformals) {
 					params->push_back(f);
 				}
 				delete subformals;
@@ -652,7 +662,7 @@ void Header::sem(bool func) {
 	cout << "+++ Opening new scope!" << endl;
 
 	if((fl != nullptr) & func) {
-		for(Formal *f: *fl) {
+		for(Formal* f: *fl) {
 				f->sem();
 		}
 	}

@@ -44,6 +44,9 @@ ostream& operator<<(ostream &out, const PrimitiveType p);
 
 bool operator==(const Type &t1, const Type &t2);
 
+template <typename T>
+void del_entries(vector<T>* vec);
+
 class ASTnode { //abstract class
 public:
 	virtual ~ASTnode();
