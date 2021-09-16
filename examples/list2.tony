@@ -8,16 +8,26 @@ def main ():
   ge := nil
 
   b := nil?(nil)
+	putb(b)
+	putb(nil?(lt))
+	putb(nil?(ge))
   lt := 23 # nil
   lt := 27 # lt
   ge := 76 # lt
   x := head(ge)
+	puti(x)
   x := head(lt)
+	puti(x)
   lt := 32 # 72 # lt
   x := head(lt)
+	puti(x)
   ge := lt
   x := head(ge)
-  ge := tail(lt)
+	puti(x)
+	ge := tail(lt)
+	%puti(ge)
   x := head(ge)
+	puti(x)
   x := head(tail(lt))
+	puti(x)
 end

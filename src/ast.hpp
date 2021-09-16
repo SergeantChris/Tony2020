@@ -882,7 +882,7 @@ public:
 			string rname = expr->getId();
 			if (rname == "_ithasnoid") rname = rhs->getName();
 			// string rname = rhs->getName();
-			cout << rname << endl;
+			// cout << rname << endl;
 			ValueEntry *rse = vt.lookup(rname + "_size");
 			int rsize = rse->lsize;
 			vt.insert(name + "_size", rsize);
