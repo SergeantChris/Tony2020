@@ -32,10 +32,17 @@ def main():
 	a := 4#5#nil
 	if(head(a) = 4):
 		puts("nia")
+	elsif(head(a) = 5):
+		skip
+	elsif(head(a) = 6):
+		skip
+	else:
+		puts("nio")
 	end
 	%a[0] := 4
 	b[0] := 5#4#nil
 	%o[0][0] := 5
 	lalala := 5
+	%"test"[0] := 'e'
 	test(new int[10])
 end
