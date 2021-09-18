@@ -567,13 +567,13 @@ public:
 		else if (op == "#"){
 			llvm::Type *seed_type = l->getType();
 			// l is the seed and r is the list
-			// we have 3 cases
-			// else if r is not the const nil but has been allocated but is not lhs =>
-			// size_lhs = size_r + 1
 			if (r == llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(i32))){
 				//if r is nil => lhs has one elem and size 1
 				llvm::AllocaInst *retalloc = Builder.CreateAlloca(llvm::PointerType::getUnqual(seed_type), nullptr, "tmplistalloc");
 				retalloc->setAlignment(8);
+				llvm::AllocaInst *initvalue = Builder.CreateAlloca(seed_type, nullptr, "initvalue");
+				retalloc->setAlignment(4);
+				Builder.CreateStore(initvalue, retalloc);
 				llvm::Value *retval = Builder.CreateLoad(retalloc, "tmplistval");
 				llvm::Value *elem = Builder.CreateInBoundsGEP(seed_type, retval,  c32(0), "lelalloc");
 				Builder.CreateStore(l, elem);
@@ -582,7 +582,6 @@ public:
 				vt.insert(sname, 1);
 				return retval;
 			}
-			// else if r is the same as lhs => size++ nad put at the end the l
 			string lname = expr2->getId();
 			if (lname == "_ithasnoid") lname = r->getName();
 			string sname = lname + "_size";
