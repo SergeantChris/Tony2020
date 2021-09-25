@@ -10,14 +10,14 @@ def simple ():
     return true
   end
 
-  int limit, number, counter
+  int l, number, counter
   bool c
   counter := 0
-  limit := 10
-  c:=prime?(counter, limit)
+  l := 10
+  c:=prime?(counter, l)
   putb(c)
   puti(counter)
-  puti(limit)
-  number:= limit + 1
+  puti(l)
+  number:= l + 1
   puti(number)
 end

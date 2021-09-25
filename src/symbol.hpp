@@ -147,7 +147,7 @@ struct ValueEntry {
 	ValueEntry(llvm::Function *f, int ofs, map<string, llvm::Value*> r) : func(f), offset(ofs), refs(r) {}
 	ValueEntry(llvm::AllocaInst *a, int ofs, string c, generalType t) :
 	 alloc(a), offset(ofs), call(c), type(t) {
-		val = nullptr;
+		val = nullptr; func = nullptr;
 	}
 };
 
@@ -185,12 +185,14 @@ public:
 	    ++size;
 		}
   }
+	map<string, ValueEntry> getMap() const { return defined; }
   int getSize() const { return size; }
   int getOffset() const { return offset; }
 private:
 	map<string, ValueEntry> defined;
   int offset;
   int size;
+	std::vector<int> v;
 };
 
 class ValueTable {
@@ -202,9 +204,11 @@ public:
   void closeScope() {
     scopes.pop_back();
   }
-  ValueEntry * lookup(string c) {
+  ValueEntry * lookup(string c, bool glob = false) {
     for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
 			ValueEntry *e = i->lookup(c);
+			if (glob && i == scopes.rbegin()) continue;
+			// cout << "hm " << endl;
       if (e != nullptr) return e;
     }
     return nullptr;
@@ -223,12 +227,30 @@ public:
   }
 	void insert(string c, llvm::AllocaInst *a, string call = "no", generalType type = Tnull) {
     scopes.back().insert(c, a, call, type);
+		// cout << c << " inswrting aloc" << endl;
   }
   int getSizeOfCurrentScope() const {
     return scopes.back().getSize();
   }
 	bool EmptyScopes() const{
 		return scopes.empty();
+	}
+	map<string, llvm::Type*> getGlobal() const {
+		// return global variables for a specific Functions
+		map<string, llvm::Type*> params = {};
+		map<string, ValueEntry>::iterator it;
+		for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
+			map<string, ValueEntry> defined = i->getMap();
+			for (it = defined.begin(); it != defined.end(); it++) {
+				ValueEntry sec = it->second;
+				if (sec.alloc != nullptr && sec.func == nullptr){
+					string name = it->first;
+	    		// cout << name << endl;
+					if (params.find(name) == params.end()) params[name] = sec.alloc->getType();
+				}
+			}
+		}
+		return params;
 	}
 private:
   std::vector<CompileScope> scopes;
