@@ -1,14 +1,16 @@
 def main ():
   int ni
-	def prime (int j):
+	def prime (int j,a):
     int pr
 		pr := 1
   end
-  def alexia (int j):
+  def alexia (ref int j):
     int pr, a
     pr := ni + j
 		a := 1
-		prime(pr)
+    ni := 1
+    j := 1
+    prime(ni, j)
   end
 	int a
   ni := 0

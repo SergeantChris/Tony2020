@@ -705,6 +705,8 @@ public:
 	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const override{
 		string var  = id;
 		llvm::Value *v;
+		ValueEntry *e = vt.lookup(var);
+		v = e->val;
 		if (call){
 			llvm::Function *func_value = TheModule->getFunction(func_name);
 			ValueEntry *e = vt.lookup(func_value->getName());
@@ -720,9 +722,10 @@ public:
 				i++;
 			}
 		}
-		ValueEntry *e = vt.lookup(var);
-		v = e->val;
+
+
 		if (e->alloc){
+			cout << "yes alloc -> " << var << endl;
 			llvm::Value *ret =  Builder.CreateLoad(v, var);
 			if (e->call == "ref" || e->call == "glob"){
 				return Builder.CreateLoad(ret, var);
@@ -730,7 +733,9 @@ public:
 			return ret;
 		}
 		else {
+			cout << "not alloc -> " << var << endl;
 			if (e->call == "ref" || e->call == "glob"){
+				cout << "yes ref || glob -> " << var << endl;
 				return Builder.CreateLoad(v, var);
 			}
 			return v;
@@ -860,11 +865,11 @@ public:
 				//if call by ref we need PointerType to rhs->getType() and setAlignment(8)
 				al = Builder.CreateAlloca(llvm::PointerType::getUnqual(rhs->getType()), nullptr, name);
 				al->setAlignment(8);
-				if (calltype == "ref") vt.insert(name, al);
+				vt.insert(name, al);
 				lhs = al;
 				Builder.CreateStore(e->val, lhs);
 				llvm::Value *ptr = Builder.CreateLoad(lhs, name);
-				if (calltype == "glob") vt.insert(name, ptr);
+				// if (calltype == "glob") lhs = ptr;
 				Builder.CreateStore(rhs, ptr);
 				ref = 1;
 			}
@@ -896,7 +901,6 @@ public:
 		else if ((rhs->getType())->isPointerTy()
 			&& ((rhs->getType())->getPointerElementType())->isArrayTy()) {
 				// right side is a new memory allocation
-				// cout << "its an ptr!" << endl;
 				llvm::Type* eltype = ((rhs->getType())->getPointerElementType())->getArrayElementType();
 				rhs = Builder.CreateBitCast(rhs, llvm::PointerType::getUnqual(eltype), "ptr");
 		}
@@ -932,10 +936,17 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
+		// cout << "INSIDE SEM for Call" << endl;
+		// we have to check if the function's arguments are the same type as the exprList (one by one)
+		// so we have to look for the ids in the st
+		// and also for the funcion itself (return type...)... not sure if true??
+
 		// check if the function is defined
 		SymbolEntry *func = st.lookup(string(id), "func_def");
 		vector<Type> params = func->params;
 		type = func->type;
+
+		// TODO: check size of the arguments!
 
 		int i = 0;
 		for(shared_ptr<Expr> e: *exprList) {
@@ -960,7 +971,7 @@ public:
 
 		unsigned idx = 0;
 		unsigned size = argsv.size();
-
+		// cout << "--- call ---- " << func_name << endl;
 		for (auto &Arg : func_value->args())
 			if (idx++ >= size){
 				string argname = Arg.getName();
@@ -975,7 +986,10 @@ public:
 					llvm::Value *v = Builder.CreateLoad(al2, argname);
 					argsv.push_back(v);
 				}
-				else argsv.push_back(argval);
+				else{
+					// cout << (e->val == e->alloc) << endl;
+					argsv.push_back(e->alloc);
+				}
 			}
 		if (func_value->getReturnType() == llvm::Type::getVoidTy(TheContext))
 			return Builder.CreateCall(func_value, argsv);
@@ -1328,10 +1342,6 @@ public:
  				f->sem();
 	}
 	virtual llvm::Value* compile() const override {
-		return compile(nullptr);
-	}
-	virtual llvm::Value* compile(llvm::BasicBlock* EndFunc) const {
-		// cout << (string)EndFunc->getName() << endl;
 		bool main = false;
 		string func_name = string(id);
 		if (func_name == "main") func_name = "jackthecutestdoggo";
@@ -1415,7 +1425,7 @@ public:
 		// llvm::BasicBlock *CurrentBB = Builder.GetInsertBlock();
 		// cout << (string)CurrentBB->getName() << endl;
 		// if (!main & CurrentBB->empty()){ cout << "empty" << endl; CurrentBB->eraseFromParent(); }
-		if (!main){ Builder.CreateBr(EndFunc);}
+		// if (!main){ Builder.CreateBr(EndFunc);}
 		return nullptr;
 	}
 	string getId() {
@@ -1476,8 +1486,10 @@ public:
 		string func_name = hd->getId();
 		if (func_name == "main") func_name = "jackthecutestdoggo";
 		llvm::Function *ParentFunc = Builder.GetInsertBlock()->getParent();
-		llvm::BasicBlock *EndFunc =
-      llvm::BasicBlock::Create(TheContext, "continue", ParentFunc);
+		// llvm::BasicBlock *EndFunc =
+    //   llvm::BasicBlock::Create(TheContext, "continue", ParentFunc);
+		llvm::BasicBlock &ParentEntry = ParentFunc->getEntryBlock();
+		llvm::BasicBlock *ParentEntry1 = &ParentEntry;
 		// llvm::Function *TheFunction = TheModule->getFunction(func_name);
 		// // if the function has not be declared do it!
 		// if (!TheFunction){
@@ -1485,7 +1497,7 @@ public:
 		// 	ValueEntry *e = vt.lookup(func_name);
 		// 	TheFunction = e->func;
 		// }
-		hd->compile(EndFunc);
+		hd->compile();
 		ValueEntry *e = vt.lookup(func_name);
 		llvm::Function *TheFunction = e->func;
 		// Create a new basic block to start insertion into.
@@ -1498,9 +1510,6 @@ public:
 			if (e) vt.insert(argname, nullptr, "glob");
 			vt.insert(argname, &Arg);
 		}
-		// %l8 = alloca i32*, align 8
-		// store i32* %l, i32** %l8
-	  // %l9 = load i32*, i32** %l8
 		for(shared_ptr<Def> d: *defl) d->compile();
 		for(shared_ptr<Stmt> s: *stmtl) s->compile();
 		if (Builder.GetInsertBlock()->empty()){
@@ -1518,8 +1527,7 @@ public:
   	verifyFunction(*TheFunction);
 		// vt.insert(func_name, TheFunction); //update
 		vt.closeScope();
-		Builder.SetInsertPoint(EndFunc);
-		// llvm::MergeBlockIntoPredecessor(EndFunc);
+		Builder.SetInsertPoint(ParentEntry1);
 		return nullptr;
 	}
 private:
@@ -1657,11 +1665,18 @@ class Library {
 public:
   Library(){};
   void init() {
+    // Formal *formal;
+    // Formal_list *formal_list;
+    // Id_list *id_list;
+
 		Type ret_t;
 		Type var_t;
 		Type varh_t;
 		vector<Type> params;
+		// vector<const char*>* id_list;
 
+		// insert(name, returnType, "func_decl", vector<Type> params)
+		// st.openScope(); cout << "+++ Opening new scope!" << endl;
 		// void puti(int n)
 		var_t.p = TYPE_int;
 		params.push_back(var_t);
@@ -1835,6 +1850,23 @@ public:
 		st.insert("src", var_t);
 		st.closeScope(); cout << "--- Closing scope!" << endl;
 		params.clear();
+
+/*	// The same but with the use of formal instead of vector<Type>
+
+    //procedure readString (size : integer; var s : array of char);
+    formal_list = new Formal_list();
+    id_list = new Id_list();
+    id_list->append_idString("s");
+
+    formal = new Formal(id_list, new Integer(), false);
+    formal_list->append_formal(formal);
+    id_list = new Id_list();
+    id_list->append_idString("size");
+    formal = new Formal(id_list, new Array(new Char()), true);
+    formal_list->append_formal(formal);
+    st.insertProcedureLib("readString", new ProcedureType(), formal_list);
+
+*/
   }
 };
 
