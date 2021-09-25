@@ -932,17 +932,10 @@ public:
 		out << ")";
 	}
 	virtual void sem() {
-		// cout << "INSIDE SEM for Call" << endl;
-		// we have to check if the function's arguments are the same type as the exprList (one by one)
-		// so we have to look for the ids in the st
-		// and also for the funcion itself (return type...)... not sure if true??
-
 		// check if the function is defined
 		SymbolEntry *func = st.lookup(string(id), "func_def");
 		vector<Type> params = func->params;
 		type = func->type;
-
-		// TODO: check size of the arguments!
 
 		int i = 0;
 		for(shared_ptr<Expr> e: *exprList) {
@@ -967,7 +960,7 @@ public:
 
 		unsigned idx = 0;
 		unsigned size = argsv.size();
-		cout << "--- call ---- " << func_name << endl;
+
 		for (auto &Arg : func_value->args())
 			if (idx++ >= size){
 				string argname = Arg.getName();
@@ -1664,18 +1657,11 @@ class Library {
 public:
   Library(){};
   void init() {
-    // Formal *formal;
-    // Formal_list *formal_list;
-    // Id_list *id_list;
-
 		Type ret_t;
 		Type var_t;
 		Type varh_t;
 		vector<Type> params;
-		// vector<const char*>* id_list;
 
-		// insert(name, returnType, "func_decl", vector<Type> params)
-		// st.openScope(); cout << "+++ Opening new scope!" << endl;
 		// void puti(int n)
 		var_t.p = TYPE_int;
 		params.push_back(var_t);
@@ -1849,23 +1835,6 @@ public:
 		st.insert("src", var_t);
 		st.closeScope(); cout << "--- Closing scope!" << endl;
 		params.clear();
-
-/*	// The same but with the use of formal instead of vector<Type>
-
-    //procedure readString (size : integer; var s : array of char);
-    formal_list = new Formal_list();
-    id_list = new Id_list();
-    id_list->append_idString("s");
-
-    formal = new Formal(id_list, new Integer(), false);
-    formal_list->append_formal(formal);
-    id_list = new Id_list();
-    id_list->append_idString("size");
-    formal = new Formal(id_list, new Array(new Char()), true);
-    formal_list->append_formal(formal);
-    st.insertProcedureLib("readString", new ProcedureType(), formal_list);
-
-*/
   }
 };
 
