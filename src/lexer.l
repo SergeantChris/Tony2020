@@ -10,8 +10,6 @@
 #include "parser.hpp"
 #include "error.hpp"
 
-#define T_eof	0
-
 using namespace std;
 
 extern int linecount;

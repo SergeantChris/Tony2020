@@ -1,8 +1,8 @@
-#include "error.hpp"
-#include <vector>
-#include <unordered_map>
-#include <sstream>
-#include "ast.hpp"
+// #include "error.hpp"
+// #include <vector>
+// #include <unordered_map>
+// #include <sstream>
+// #include "ast.hpp"
 #include "symbol.hpp"
 
 using namespace std;
@@ -92,4 +92,113 @@ Type SymbolTable::getReturnType() const {
 
 bool SymbolTable::EmptyScopes() const{
 	return scopes.empty();
+}
+
+CompileScope::CompileScope(int ofs) : defined(), offset(ofs), size(0) {}
+
+ValueEntry* CompileScope::lookup(string c) {
+		if (defined.find(c) == defined.end())
+			return nullptr;
+		return &defined[c];
+}
+
+void CompileScope::insert(string c, llvm::Value *v) {
+		defined[c].val = v;
+}
+
+void CompileScope::insert(string c, int s) {
+	if (defined.find(c) != defined.end()) defined[c].lsize = s;
+	else {
+		defined[c] = ValueEntry(s, offset++);
+		++size;
+	}
+}
+
+void CompileScope::insert(string c, llvm::Function *f, map<string, llvm::Value*> refs) {
+	if (defined.find(c) != defined.end())
+		defined[c].func = f;
+	else {
+		defined[c] = ValueEntry(f, offset++, refs);
+		++size;
+	}
+}
+
+void CompileScope::insert(string c, llvm::AllocaInst *a, string call, generalType type) {
+	if (defined.find(c) != defined.end())
+		defined[c].alloc = a;
+	else{
+		defined[c] = ValueEntry(a, offset++, call, type);
+		++size;
+	}
+}
+
+map<string, ValueEntry> CompileScope::getMap() const { return defined; }
+
+int CompileScope::getSize() const { return size; }
+
+int CompileScope::getOffset() const { return offset; }
+
+
+void ValueTable::openScope() {
+	int ofs = scopes.empty() ? 0 : scopes.back().getOffset();
+	scopes.push_back(CompileScope(ofs));
+}
+
+void ValueTable::closeScope() {
+	scopes.pop_back();
+}
+
+ValueEntry* ValueTable::lookup(string c, bool glob) {
+	for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
+		ValueEntry *e = i->lookup(c);
+		if (glob && i == scopes.rbegin()) continue;
+		// cout << "hm " << endl;
+		if (e != nullptr) return e;
+	}
+	return nullptr;
+}
+
+void ValueTable::insert(string c, llvm::Value *v) {
+	for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
+		ValueEntry *e = i->lookup(c);
+		if (e != nullptr) i->insert(c, v);
+	}
+}
+
+void ValueTable::insert(string c, int lsize) {
+	scopes.back().insert(c, lsize);
+}
+
+void ValueTable::insert(string c, llvm::Function *f, map<string, llvm::Value*> refs) {
+	scopes.back().insert(c, f, refs);
+}
+
+void ValueTable::insert(string c, llvm::AllocaInst *a, string call, generalType type) {
+	scopes.back().insert(c, a, call, type);
+}
+
+int ValueTable::getSizeOfCurrentScope() const {
+	return scopes.back().getSize();
+}
+
+bool ValueTable::EmptyScopes() const {
+	return scopes.empty();
+}
+
+map<string, llvm::Type*> ValueTable::getGlobal() const {
+	// return global variables for a specific Functions
+	map<string, llvm::Type*> params = {};
+	map<string, ValueEntry>::iterator it;
+	for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
+		map<string, ValueEntry> defined = i->getMap();
+		for (it = defined.begin(); it != defined.end(); it++) {
+			ValueEntry sec = it->second;
+			if (sec.alloc != nullptr && sec.func == nullptr){
+				string name = it->first;
+				// cout << name << endl;
+				if (params.find(name) == params.end()) params[name] = sec.alloc->getType();
+			}
+		}
+	}
+	return params;
 }

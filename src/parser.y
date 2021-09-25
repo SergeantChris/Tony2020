@@ -13,7 +13,9 @@ using namespace std;
 #define YYERROR_VERBOSE 1
 
 SymbolTable st;
+ValueTable vt;
 Library *lib = new Library();
+bool retval;
 
 int linecount = 1;
 int opt_flag=0, lco_flag=0, ico_flag=0;
@@ -112,15 +114,18 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 
 program:
 	func_def  {
-		cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
+		/* cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
 		cout << *$1 << endl;
     cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
 		st.openScope();
 		lib->init(); // Initialize all built in functions and procedures
 		$1->sem();
-		st.closeScope();
+		st.closeScope(); */
 
-		/* $1->llvm_compile_and_dump(opt_flag); */
+		/* cout << endl << "------------------------------------------------------- LLVM --------------------------------------------------------" << std::endl; */
+		$1->llvm_compile_and_dump(opt_flag);
+		delete $1;
+		vt.closeScope();
 		return 0;
 	}
 ;
@@ -239,15 +244,15 @@ expr_list:
 
 atom:
 	T_id								{ $$ = new Id($1); }
-| T_string						{ cout << "String " << $1 << endl; $$ = new String($1); } // TODO: semcheck can we Assign to string atoms
+| T_string						{ $$ = new String($1); } // TODO: semcheck can we Assign to string atoms
 | atom '[' expr ']'		{ $$ = new DirectAcc($1, $3); }
 | call								{ $$ = new ReturnValue($1); }
 ;
 
 expr:
 	atom 														{ $$ = $1; }
-| T_constInt											{ cout << "T_constInt " << $1 << endl; $$ = new Const($1); }
-| T_constChar											{ cout << "T_constChar" << endl; $$ = new Const($1); }
+| T_constInt											{ $$ = new Const($1); }
+| T_constChar											{ $$ = new Const($1); }
 | '(' expr ')'										{ $$ = $2; }
 | '+' expr %prec PLUS_SIGN				{ $$ = new PreOp("+", $2); }
 | '-' expr %prec MINUS_SIGN				{ $$ = new PreOp("-", $2); }

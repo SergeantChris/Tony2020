@@ -6,14 +6,26 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <string.h>
 #include "lexer.hpp"
 #include "symbol.hpp"
 #include "type.hpp"
 
+
+#include <llvm/IR/Value.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
+#include <llvm/IR/DerivedTypes.h>
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
 using namespace std;
 
 #define PRE_DEBUG 1
-
 
 class CompositeType { //abstract class
 public:
@@ -50,6 +62,51 @@ public:
 	virtual ~ASTnode();
 	virtual void printNode(ostream &out) const = 0;
 	virtual void sem();
+	virtual llvm::Value* compile() const = 0;
+	void llvm_compile_and_dump(bool optimize=true);
+
+protected:
+  static llvm::LLVMContext TheContext;
+  static llvm::IRBuilder<> Builder;
+  static unique_ptr<llvm::Module> TheModule;
+  static unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+
+	static llvm::Function *Puti;
+  static llvm::Function *Putb;
+  static llvm::Function *Putc;
+  static llvm::Function *Puts;
+
+  static llvm::Function *Geti;
+  static llvm::Function *Getb;
+	static llvm::Function *Getc;
+  static llvm::Function *Gets;
+
+	static llvm::Function *Abs;
+	static llvm::Function *Ord;
+	static llvm::Function *Chr;
+
+	static llvm::Function *Strlen;
+	static llvm::Function *Strcmp;
+	static llvm::Function *Strcpy;
+	static llvm::Function *Strcat;
+
+	static llvm::Type *i1;
+  static llvm::Type *i8;
+  static llvm::Type *i32;
+  static llvm::Type *i64;
+
+  static llvm::ConstantInt* c32(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(32, n, true));
+  }
+	static llvm::ConstantInt* c64(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n, true));
+  }
+  static llvm::ConstantInt* c8(char c) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
+  }
+	static llvm::ConstantInt* c1(bool b) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(1, b, true));
+  }
 };
 
 ostream& operator<<(ostream &out, const ASTnode &n);
@@ -57,13 +114,16 @@ ostream& operator<<(ostream &out, const ASTnode &n);
 class Expr: public ASTnode { //abstract class
 public:
 	virtual ~Expr();
-	// TODO: there is a problem here...it never reaches the override function inside const when the caller is not const i.e. Op
-
 	void typeCheck(Type t);
 	void typeCheck(PrimitiveType p);
 	void typeCheck(CompositeType* c);
 	void typeCheck(CompositeType* c1, CompositeType* c2);
 	Type getType();
+
+	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const {return nullptr;}
+	virtual llvm::Value* compile_alloc() const {return nullptr;}
+	virtual llvm::AllocaInst* compile_alloc_mem(string name ) const {return nullptr;}
+	virtual const char* getId() {return "_noid";}
 
 protected:
   Type type;
@@ -77,6 +137,9 @@ public:
 	~Const();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
+	virtual llvm::Value* compile() const override;
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override;
+
 private:
 	union TC {
 		int integer;
@@ -95,6 +158,10 @@ public:
 	~PreOp();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
+	virtual llvm::Value* compile() const override;
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override;
+	const char* getId() override;
+
 private:
 	string op;
 	Expr* expr;
@@ -106,6 +173,10 @@ public:
 	~Op();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
+	virtual llvm::Value* compile() const override;
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override;
+	const char* getId() override;
+
 private:
 	string op;
 	Expr* expr1;
@@ -118,6 +189,11 @@ public:
 	~MemoryAlloc();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
+	virtual llvm::AllocaInst* compile_alloc_mem(string name = "tmparray") const override;
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override;
+	llvm::Type* defineArrayType(Type t) const;
+
 private:
 	Type new_type;
 	Expr* expr;
@@ -136,6 +212,10 @@ public:
 	virtual void printNode(ostream &out) const override;
 	const char* getId() override;
 	virtual void sem() override;
+	virtual llvm::Value* compile() const override;
+	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const override;
+	virtual llvm::Value* compile_alloc() const override;
+
 private:
 	const char* id;
 };
@@ -144,6 +224,7 @@ class String: public Atom, public Const {
 public:
 	String(string s);
 	~String();
+	virtual llvm::Value* compile_alloc() const override;
 };
 
 class DirectAcc: public Atom {
@@ -152,6 +233,11 @@ public:
 	~DirectAcc();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
+	virtual llvm::Value* compile_alloc() const override;
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override;
+	virtual const char* getId() override;
+
 private:
 	Atom* atom;
 	Expr* expr;
@@ -173,6 +259,7 @@ public:
 	~NoAction();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
 };
 
 class Assign: public Simple {
@@ -181,7 +268,8 @@ public:
 	~Assign();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
-
+	virtual llvm::Value* compile() const override;
+	
 private:
 	Atom* atom;
 	Expr* expr;
@@ -193,6 +281,7 @@ public:
 	~Call();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
 	Type getType();
 
 private:
@@ -207,6 +296,9 @@ public:
 	~ReturnValue();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override;
+	virtual llvm::Value* compile() const override;
+	virtual llvm::Value* compile_alloc() const override;
 
 private:
 	Call* call;
@@ -218,6 +310,8 @@ public:
 	~Return();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
+
 private:
 	Expr* ret_val;
 };
@@ -231,6 +325,9 @@ public:
 	~Branch();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
+	virtual llvm::Value* compile() const override;
+	void setAfterBB(llvm::BasicBlock *AfterBB);
+
 private:
 	vector<shared_ptr<Stmt>>* cond_true;
 	Expr* condition;
@@ -247,6 +344,7 @@ public:
 	~Loop();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
+	virtual llvm::Value* compile() const override;
 
 private:
 	vector<shared_ptr<Simple>>* inits;
@@ -261,10 +359,13 @@ public:
 	~Formal();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
 	vector<Formal*>* getOpenedFormal();
 	Type getType();
+	int getCountofIds();
 	vector<const char*>* getIds();
 	bool getCb();
+
 private:
 	Type type;
 	vector<const char*>* idl;
@@ -278,6 +379,12 @@ public:
 	~Header();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem(bool func = true);
+	virtual llvm::Value* compile() const override;
+	string getId();
+	bool isVoid();
+	Type getType();
+	vector< Formal*>* getFormals();
+
 private:
 	const char* id;
 	vector< Formal*>* fl;
@@ -295,6 +402,8 @@ public:
 	~FuncDef();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
+
 private:
 	Header* hd;
 	vector<shared_ptr<Def>>* defl;
@@ -308,6 +417,9 @@ public:
 	~FuncDecl();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
+	llvm::Type* convertType(Type type) const;
+
 private:
 	Header* hd;
 };
@@ -318,6 +430,9 @@ public:
 	~VarDef();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
+	virtual llvm::Value* compile() const override;
+	llvm::Type* defineListType(Type t) const;
+
 private:
 	Type type;
 	vector<const char*>* idl;
