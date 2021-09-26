@@ -233,7 +233,7 @@ void ASTnode::llvm_compile_and_dump(bool optimize) {
 	// Emit the program code
 	retval = false;
 	compile();
-	Builder.GetInsertBlock()->eraseFromParent();
+	// Builder.GetInsertBlock()->eraseFromParent();
 	// Verify the IR
 	// bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
 	llvm::verifyModule(*TheModule, &llvm::errs());
@@ -615,7 +615,6 @@ llvm::Value* Id::compile_check_call(bool call, string func_name, int index) cons
 
 
 	if (e->alloc){
-		cout << "yes alloc -> " << var << endl;
 		llvm::Value *ret =  Builder.CreateLoad(v, var);
 		if (e->call == "ref" || e->call == "glob"){
 			return Builder.CreateLoad(ret, var);
@@ -623,9 +622,7 @@ llvm::Value* Id::compile_check_call(bool call, string func_name, int index) cons
 		return ret;
 	}
 	else {
-		cout << "not alloc -> " << var << endl;
 		if (e->call == "ref" || e->call == "glob"){
-			cout << "yes ref || glob -> " << var << endl;
 			return Builder.CreateLoad(v, var);
 		}
 		return v;
