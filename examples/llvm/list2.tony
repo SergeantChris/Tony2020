@@ -1,0 +1,44 @@
+def main ():
+  int pivot, x
+  bool b
+  list[int] lt, ge
+
+  x := 0
+  lt := nil
+  ge := nil
+
+  b := nil?(nil)
+	putb(b)
+	putb(nil?(lt))
+	putb(nil?(ge))
+  lt := 23 # nil
+	puti(head(lt))
+	putb(b)
+  lt := 27 # lt
+	puti(head(lt))
+	putb(b)
+  ge := 76 # lt
+	puti(head(ge))
+	putb(b)
+  x := head(ge)
+	puti(x)
+	putb(b)
+  x := head(lt)
+	puti(x)
+	putb(b)
+  lt := 32 # 72 # lt
+  x := head(lt)
+	puti(x)
+	putb(b)
+  ge := lt
+  x := head(ge)
+	puti(x)
+	putb(b)
+	ge := tail(lt)
+  x := head(ge)
+	puti(x)
+	putb(b)
+  x := head(tail(lt))
+	puti(x)
+	putb(b)
+end

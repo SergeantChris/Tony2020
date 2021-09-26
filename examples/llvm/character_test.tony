@@ -1,0 +1,6 @@
+def main():
+
+	if 'c'='d':
+		puts("yey\n")
+	end
+end

@@ -116,11 +116,11 @@ program:
 	func_def  {
 		/* cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
 		cout << *$1 << endl;
-    cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl;
+    cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl; */
 		st.openScope();
 		lib->init(); // Initialize all built in functions and procedures
 		$1->sem();
-		st.closeScope(); */
+		st.closeScope();
 
 		/* cout << endl << "------------------------------------------------------- LLVM --------------------------------------------------------" << std::endl; */
 		$1->llvm_compile_and_dump(opt_flag);
@@ -290,15 +290,15 @@ int main(int argc, char* argv[]) {
 
 	for(int i = 1; i < argc-1; i++) {
 		if(strcmp(argv[i], "-O")==0 && !opt_flag) {
-			cout << "+++	Optimizations sellected" << endl;
+			/* cout << "+++	Optimizations sellected" << endl; */
 			opt_flag=1;
 		}
 		else if(strcmp(argv[i], "-f")==0 && !lco_flag) {
-			cout << "+++	Final Code Output to stdout sellected" << endl;
+			/* cout << "+++	Final Code Output to stdout sellected" << endl; */
 			lco_flag=1;
 		}
 		else if(strcmp(argv[i], "-i")==0 && !ico_flag) {
-			cout << "+++	Intermediate Code Output to stdout sellected" << endl;
+			/* cout << "+++	Intermediate Code Output to stdout sellected" << endl; */
 			ico_flag=1;
 		}
 	}

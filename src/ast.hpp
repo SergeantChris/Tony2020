@@ -25,7 +25,7 @@
 
 using namespace std;
 
-#define PRE_DEBUG 1
+#define PRE_DEBUG 0
 
 class CompositeType { //abstract class
 public:
@@ -269,7 +269,7 @@ public:
 	virtual void printNode(ostream &out) const override;
 	virtual void sem();
 	virtual llvm::Value* compile() const override;
-	
+
 private:
 	Atom* atom;
 	Expr* expr;

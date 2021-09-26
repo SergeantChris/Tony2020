@@ -1,8 +1,3 @@
-// #include "error.hpp"
-// #include <vector>
-// #include <unordered_map>
-// #include <sstream>
-// #include "ast.hpp"
 #include "symbol.hpp"
 
 using namespace std;
@@ -38,15 +33,19 @@ SymbolEntry* Scope::lookup(string c, string def) {
 void Scope::insert(string c, Type t, string def, vector<Formal*>* v) {
 	if (def == "var"){
 		if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
-		if (funcs.find(c) != funcs.end()) error("Duplicate id: %s", c);
-		cout << "Inserting Var: " << c << " into locals" << endl;
+		if (funcs.find(c) != funcs.end()) error("Duplicate id (this name is already used by a function): %s", c);
+		#if PRE_DEBUG
+			cout << "Inserting Var: " << c << " into locals" << endl;
+		#endif
 		locals[c] = SymbolEntry(t, offset++);
     ++size;
 	}
 	else {
 		if (funcs.find(c) != funcs.end()) error("Duplicate function name: %s", c);
-		if (locals.find(c) != locals.end()) error("Duplicate id: %s", c);
-		cout << "Inserting Fun: " << c << " into funcs" << endl;
+		if (locals.find(c) != locals.end()) error("Duplicate id (this name is already used by a function): %s", c);
+		#if PRE_DEBUG
+			cout << "Inserting Fun: " << c << " into funcs" << endl;
+		#endif
 		funcs[c] = SymbolEntry(t, offset++, def, v);
 		last_func = funcs[c];
 		++size;
@@ -68,7 +67,9 @@ void SymbolTable::closeScope() {
 }
 SymbolEntry* SymbolTable::lookup(string c, string def) {
   for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
-		cout << "scope with size: " << i->getSize() << " and offset: " << i->getOffset() << endl;
+		#if PRE_DEBUG
+			cout << "scope with size: " << i->getSize() << " and offset: " << i->getOffset() << endl;
+		#endif
 		SymbolEntry *e = i->lookup(c, def);
     if (e != nullptr) return e;
   }
@@ -76,7 +77,6 @@ SymbolEntry* SymbolTable::lookup(string c, string def) {
   	ostringstream formatted;
   	formatted << "Entry " << c << " not found";
   	error(formatted.str());
-  	// error("Entry %s not found", c);
   }
   return nullptr;
 }

@@ -1,0 +1,23 @@
+def simple ():
+  def bool prime? (int n; ref int l):
+    puti(n)
+    n := n+2
+    puti(n)
+    n := l + n
+    puti(n)
+    l := n
+    puti(l)
+    return true
+  end
+
+  int l, number, counter
+  bool c
+  counter := 0
+  l := 10
+  c:=prime?(counter, l)
+  putb(c)
+  puti(counter)
+  puti(l)
+  number:= l + 1
+  puti(number)
+end

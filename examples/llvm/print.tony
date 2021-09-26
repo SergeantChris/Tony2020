@@ -1,0 +1,15 @@
+def main ():
+  int n
+	char c
+	bool b
+	c := 'a'
+  n := 2021
+	b := true
+  puti(n)
+	%puts("\n")
+	putc(c)
+	%putc('\n')
+	%putb(b)
+	%putc('\n')
+	%puts("ante geiaa!\n")
+end

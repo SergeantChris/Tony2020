@@ -1,16 +1,6 @@
-// #include <iostream>
-// #include <sstream>
-// #include <vector>
-// #include <memory>
-// #include <string>
-// #include <string.h>
-// #include "lexer.hpp"
-// #include "symbol.hpp"
 #include "ast.hpp"
 
 using namespace std;
-
-#define PRE_DEBUG 1
 
 
 CompositeType::~CompositeType() {}
@@ -576,13 +566,20 @@ const char* Id::getId() {
 	return id;
 }
 void Id::sem() {
-	cout << "Searching for: " << id << " ... ";
+	#if PRE_DEBUG
+		cout << "Searching for: " << id << " ... ";
+	#endif
 	SymbolEntry *e = st.lookup(string(id));
 	if(e != nullptr) {
-		cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
+		#if PRE_DEBUG
+			cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
+		#endif
 		type = e->type;
 	}
 	else { // WUT THE FUCK IS HAPPENING HERE
+		// TODO: here we have to fill type with somathing, in order to avoid seg faults after
+		// it is very easy to check a nullptr, but harder to check if a Type object has neiher
+		// PrimitiveType nor CompositeType
 		Type t;
 		t.p = TYPE_nil;
 		type = t;
@@ -689,7 +686,7 @@ Simple::~Simple() {}
 NoAction::NoAction() {}
 NoAction::~NoAction() {}
 void NoAction::printNode(ostream &out) const {
-	out << "no_action";
+	out << "NoAction()";
 }
 void NoAction::sem() {}
 llvm::Value* NoAction::compile() const {
@@ -816,8 +813,9 @@ void Call::sem() {
 
 	if(exprList != nullptr) {
 		if(params != nullptr) {
+			// check the number of arguments in the call
 			if(params->size() == exprList->size()) {
-				// we have to check if the function's arguments are the same type as the exprList (one by one)
+				// check if the argumets match the function's header arguments
 				int i = 0;
 				for(shared_ptr<Expr> e: *exprList) {
 					e->sem();
@@ -827,13 +825,13 @@ void Call::sem() {
 			}
 			else {
 				ostringstream formatted;
-				formatted << "Function takes " << params->size() << " arguments, " << exprList->size() << " were given";
+				formatted << "Function takes " << params->size() << " arguments, but" << exprList->size() << " arguments were given";
 				error(formatted.str());
 			}
 		}
 		else {
 			ostringstream formatted;
-			formatted << "Function takes no arguments, " << exprList->size() << " were given";
+			formatted << "Function takes no arguments, but " << exprList->size() << " arguments were given";
 			error(formatted.str());
 		}
 	}
@@ -854,7 +852,6 @@ llvm::Value* Call::compile() const {
 
 	unsigned idx = 0;
 	unsigned size = argsv.size();
-	// cout << "--- call ---- " << func_name << endl;
 	for (auto &Arg : func_value->args())
 		if (idx++ >= size){
 			string argname = Arg.getName();
@@ -870,7 +867,6 @@ llvm::Value* Call::compile() const {
 				argsv.push_back(v);
 			}
 			else{
-				// cout << (e->val == e->alloc) << endl;
 				argsv.push_back(e->alloc);
 			}
 		}
@@ -889,7 +885,7 @@ void ReturnValue::printNode(ostream &out) const {
 	out << "ReturnValue(" << *call << ")";
 }
 void ReturnValue::sem() {
-	// CAN I SOMEHOW GET FUNC RETURN ID AS WELL? see assign comment
+	// TODO: CAN I SOMEHOW GET FUNC RETURN ID AS WELL? see assign comment
 	call->sem();
 	type = call->getType();
 }
@@ -916,7 +912,9 @@ void Return::printNode(ostream &out) const {
 void Return::sem() {
 	if(ret_val != nullptr) {
 		ret_val->sem();
-		cout << "Checking return type ..." << endl;
+		#if PRE_DEBUG
+			cout << "Checking return type ..." << endl;
+		#endif
 		ret_val->typeCheck(st.getReturnType());
 	}
 }
@@ -924,7 +922,7 @@ llvm::Value* Return::compile() const {
 	retval = true;
 	if (llvm::Value *RetVal = ret_val->compile()) {
 		// Finish off the function.
-			Builder.CreateRet(RetVal);
+		Builder.CreateRet(RetVal);
 		return RetVal;
 	}
 	else return Builder.CreateRetVoid();
@@ -961,11 +959,12 @@ void Branch::sem() {
 	if(else_branch != nullptr) else_branch->sem();
 }
 llvm::Value* Branch::compile() const {
+
 	llvm::Value *v = condition->compile();
 	llvm::Value *cond = Builder.CreateICmpNE(v, c1(0), "if_cond");
 	llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
-	llvm::BasicBlock *ThenBB =
-		llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+	llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+
 	vector<llvm::BasicBlock*> IfElseVec;
 	if(elsif_branches != nullptr && !(elsif_branches->empty()))
 		for (size_t i = 0; i < (*elsif_branches).size(); i++)
@@ -1086,7 +1085,7 @@ llvm::Value* Loop::compile() const {
 
 Formal::Formal(Type t, vector<const char*>* i, string cb): type(t), idl(i) {
 		if(cb == "val") call_by_reference = false;
-		else if(cb == "ref") call_by_reference = true;  //could be enum
+		else if(cb == "ref") call_by_reference = true;
 	}
 Formal::~Formal() { delete idl; }
 void Formal::printNode(ostream &out) const {
@@ -1107,7 +1106,7 @@ void Formal::sem() {
 	}
 }
 llvm::Value* Formal::compile() const {
-	// TODO: call by ref how?
+
 	for(const char* i: *idl) {
 		string name = string(i);
 		llvm::AllocaInst *a = nullptr;
@@ -1160,7 +1159,9 @@ void Header::printNode(ostream &out) const {
 }
 void Header::sem(bool func) {
 	if (!st.EmptyScopes()){
-		cout << "Looking up for declaration of the function... ";
+		#if PRE_DEBUG
+			cout << "Looking up for declaration of the function... ";
+		#endif
 		SymbolEntry *e = st.lookup(id, "func_decl");
 		vector<Formal*>* params;
 		if(fl != nullptr) {
@@ -1180,25 +1181,25 @@ void Header::sem(bool func) {
 		}
 		else {
 			string def = e->from;
-			if ((def == "func_def") && func) error("Duplicate function definition");
-			if ((def == "func_decl") && !func) error("Duplicate function declaration");
+			if ((def == "func_def") && func) error("Duplicate function definition: %s", id);
+			if ((def == "func_decl") && !func) error("Duplicate function declaration: %s", id);
 			else {
-				if (!(e->type == type)) error("Mismatch in function definition");
+				if (!(e->type == type)) error("Mismatch in function definition: %s", id);
 				vector<Formal*>* decl_params = e->params;
 				int i=0;
 				for(Formal* f_def: *params) {
 					Formal* f_decl = decl_params->at(i);
 					ostringstream formatted;
 					if(!(f_def->getType() == f_decl->getType())) {
-						formatted << "Mismatch in arg type at position " << i;
+						formatted << "Mismatch in arg type at position: " << i << " of function: " << id;
 						error(formatted.str());
 					}
 					if(strcmp(f_def->getIds()->at(0), f_decl->getIds()->at(0))) {
-						formatted << "Mismatch in arg id at position " << i;
+						formatted << "Mismatch in argument name at position: " << i << " of function: " << id;
 						error(formatted.str());
 					}
 					if(f_def->getCb() != f_decl->getCb()) {
-						formatted << "Mismatch in arg call by method at position " << i;
+						formatted << "Mismatch in argument \'call by\' method at position: " << i << " of function: " << id;
 						error(formatted.str());
 					}
 					i++;
@@ -1207,8 +1208,9 @@ void Header::sem(bool func) {
 		}
 	}
 	st.openScope();
-	cout << "+++ Opening new scope!" << endl;
-
+	#if PRE_DEBUG
+		cout << "+++ Opening new scope!" << endl;
+	#endif
 	if((fl != nullptr) & func) {
 		for(Formal *f: *fl) {
 				f->sem();
@@ -1342,7 +1344,9 @@ void FuncDef::sem() {
 	for(shared_ptr<Def> d: *defl) d->sem();
 	for(shared_ptr<Stmt> s: *stmtl) s->sem();
 	size = st.getSizeOfCurrentScope();
-	cout << "--- Closing scope!" << endl;
+	#if PRE_DEBUG
+		cout << "--- Closing scope!" << endl;
+	#endif
   st.closeScope();
 }
 llvm::Value* FuncDef::compile() const {
@@ -1403,7 +1407,9 @@ void FuncDecl::printNode(ostream &out) const {
 }
 void FuncDecl::sem() {
 	hd->sem(false);
-	cout << "--- Closing scope!" << endl;
+	#if PRE_DEBUG
+		cout << "--- Closing scope!" << endl;
+	#endif
 	st.closeScope();
 	// check for same names with def!
 }
@@ -1509,8 +1515,6 @@ void Library::init() {
 	Type variable_type;
 	Type varh_t;
 
-	// insert(name, returnType, "func_decl", vector<Formal*>* params)
-
 	// void puti(int n)
  	params = new vector<Formal*>;
 	id_list = new vector<const char*>;
@@ -1521,9 +1525,9 @@ void Library::init() {
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	st.insert("puti", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("n", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// void putb(bool b)
 	params = new vector<Formal*>;
@@ -1535,9 +1539,9 @@ void Library::init() {
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	st.insert("putb", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("b", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// void putc(char c)
 	params = new vector<Formal*>;
@@ -1549,9 +1553,9 @@ void Library::init() {
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	st.insert("putc", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("c", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// void puts(char[] s)
 	params = new vector<Formal*>;
@@ -1563,30 +1567,30 @@ void Library::init() {
 	params->push_back(new Formal(variable_type, id_list, "val"));
 	st.insert("puts", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("s", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// int geti()
 	return_type.p = TYPE_int;
 	st.insert("geti", return_type, "func_decl", nullptr);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.openScope();
+	st.closeScope();
 
 	// bool getb()
 	return_type.p = TYPE_bool;
 	st.insert("getb", return_type, "func_decl", nullptr);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.openScope();
+	st.closeScope();
 
 	// char getc()
 	return_type.p = TYPE_char;
 	st.insert("getc", return_type, "func_decl", nullptr);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.openScope();
+	st.closeScope();
 
 	// void gets(int n, char[] s)	// n: max character to read from input (including /0), s: the array of chars where you should put the resault
 	params = new vector<Formal*>;
@@ -1605,13 +1609,13 @@ void Library::init() {
 	return_type.p = TYPE_void;
 	st.insert("gets", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	variable_type.p = TYPE_int;
 	st.insert("n", variable_type);
 	varh_t.p = TYPE_char;
 	variable_type.c = new Array(varh_t);
 	st.insert("s", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// int abs(int n)
 	params = new vector<Formal*>;
@@ -1623,9 +1627,9 @@ void Library::init() {
 	return_type.p = TYPE_int;
 	st.insert("abs", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("n", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// int ord(char c)
 	params = new vector<Formal*>;
@@ -1637,9 +1641,9 @@ void Library::init() {
 	return_type.p = TYPE_int;
 	st.insert("ord", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("c", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// char chr(int n)
 	params = new vector<Formal*>;
@@ -1651,9 +1655,9 @@ void Library::init() {
 	return_type.p = TYPE_char;
 	st.insert("chr", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("n", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// int strlen(char[] s)
 	params = new vector<Formal*>;
@@ -1665,9 +1669,9 @@ void Library::init() {
 	return_type.p = TYPE_int;
 	st.insert("strlen", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("s", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// int strcmp(char[] s1, s2)
 	params = new vector<Formal*>;
@@ -1680,10 +1684,10 @@ void Library::init() {
 	return_type.p = TYPE_int;
 	st.insert("strcmp", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("s1", variable_type);
 	st.insert("s2", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// void strcpy(char[] trg, src)
 	params = new vector<Formal*>;
@@ -1696,10 +1700,10 @@ void Library::init() {
 	return_type.p = TYPE_void;
 	st.insert("strcpy", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("trg", variable_type);
 	st.insert("src", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
+	st.closeScope();
 
 	// void strcat(char[] trg, src)
 	params = new vector<Formal*>;
@@ -1712,9 +1716,8 @@ void Library::init() {
 	return_type.p = TYPE_void;
 	st.insert("strcat", return_type, "func_decl", params);
 
-	st.openScope(); cout << "+++ Opening new scope!" << endl;
+	st.openScope();
 	st.insert("trg", variable_type);
 	st.insert("src", variable_type);
-	st.closeScope(); cout << "--- Closing scope!" << endl;
-
+	st.closeScope();
 }
