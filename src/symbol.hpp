@@ -208,7 +208,6 @@ public:
     for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
 			ValueEntry *e = i->lookup(c);
 			if (glob && i == scopes.rbegin()) continue;
-			// cout << "hm " << endl;
       if (e != nullptr) return e;
     }
     return nullptr;
@@ -219,8 +218,9 @@ public:
       if (e != nullptr) i->insert(c, v);
     }
   }
-	void insert(string c, int lsize) {
-    scopes.back().insert(c, lsize);
+	void insert(string c, int lsize, bool call_list = false) {
+		if (call_list) (scopes.rbegin()[1]).insert(c, lsize);
+    else scopes.back().insert(c, lsize);
   }
 	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs = {}) {
     scopes.back().insert(c, f, refs);

@@ -221,7 +221,6 @@ public:
     // Emit the program code
 		retval = false;
     compile();
-		Builder.GetInsertBlock()->eraseFromParent();
     // Verify the IR
     // bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
 		llvm::verifyModule(*TheModule, &llvm::errs());
@@ -240,11 +239,6 @@ protected:
   static llvm::IRBuilder<> Builder;
   static unique_ptr<llvm::Module> TheModule;
   static unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
-	// static map<string, llvm::Value *> NamedValues;
-	// static map<string, llvm::Function *> NamedFuncs;
-	// NamedValues: keeps track of which values are defined in the current scope
-	// and what their LLVM representation is
-	// the only values that can be in the NamedValues map are function arguments.
 
 	static llvm::Function *Puti;
   static llvm::Function *Putb;
@@ -372,7 +366,7 @@ public:
 	Type getType() {
 		return type;
 	}
-	virtual const char* getId() {return "_noid";}
+	virtual const char* getId() {return "_ithasnoid";}
 	Type getNestedType() {
 		if(isPrimitive(type)) {
 			error("");
@@ -589,6 +583,7 @@ public:
 			if (lname == "_ithasnoid") lname = r->getName();
 			string sname = lname + "_size";
 			ValueEntry *e = vt.lookup(sname);
+			if (!e) cout << "oops" << endl;
 			int lsize = e->lsize;
 			llvm::Value *v = Builder.CreateInBoundsGEP(seed_type, r,  c32(lsize), "lelalloc");
 			Builder.CreateStore(l, v);
@@ -657,7 +652,6 @@ public:
 
 		llvm::ArrayType *array = llvm::ArrayType::get(array_type->getPointerElementType(), size);
 		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
-		// ArrayAlloc = Builder.CreateAlloca(array_type, nullptr, name);
 		ArrayAlloc->setAlignment(8);
 		return ArrayAlloc;
 	}
@@ -722,24 +716,13 @@ public:
 				i++;
 			}
 		}
-
-
 		if (e->alloc){
-			cout << "yes alloc -> " << var << endl;
-			llvm::Value *ret =  Builder.CreateLoad(v, var);
-			if (e->call == "ref" || e->call == "glob"){
-				return Builder.CreateLoad(ret, var);
-			}
-			return ret;
+			if (e->call == "glob") v = e->alloc;
+			v = Builder.CreateLoad(v, var);
 		}
-		else {
-			cout << "not alloc -> " << var << endl;
-			if (e->call == "ref" || e->call == "glob"){
-				cout << "yes ref || glob -> " << var << endl;
-				return Builder.CreateLoad(v, var);
-			}
-			return v;
-		}
+		if (e->call == "ref" || e->call == "glob")
+			return Builder.CreateLoad(v, var);
+		return v;
 	}
 	virtual llvm::Value* compile_alloc() const override {
 		string var = string(id);
@@ -755,9 +738,7 @@ class String: public Atom, public Const {
 public:
 	String(const char* s): Const(s) {}
 	~String() {}
-	virtual llvm::Value* compile_alloc() const override {
-		return nullptr;
-	}
+	virtual llvm::Value* compile_alloc() const override { return nullptr; }
 };
 
 class DirectAcc: public Atom {
@@ -782,17 +763,13 @@ public:
 	virtual llvm::Value* compile_alloc() const override {
 		llvm::Value *vexpr = expr->compile();
 		llvm::Value *vatom = atom->compile_alloc();
-		// llvm::Value *elem = Builder.CreateLoad(vatom, "arrayelem");
-		// llvm::Value *v = Builder.CreateInBoundsGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemalloc");
 		llvm::Value *v = nullptr;
-		if (((vatom->getType())->getPointerElementType())->isArrayTy()){
+		if (((vatom->getType())->getPointerElementType())->isArrayTy())
 			  v = Builder.CreateInBoundsGEP(vatom, {c32(0), vexpr}, "elemalloc");
-		}
 		if (((vatom->getType())->getPointerElementType())->isPointerTy()){
 			 llvm::Value *elem = Builder.CreateLoad(vatom, "arrayelem");
 			 v = Builder.CreateInBoundsGEP((elem->getType())->getPointerElementType(), elem,  vexpr, "elemalloc");
 		}
-
 		return v;
 	}
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override{
@@ -837,7 +814,9 @@ public:
 		bool ref = 0;
 		string name = string(atom->getId());
 		ValueEntry *e = vt.lookup(name);
+		llvm::Value *rhs = nullptr;
 		if (!e) {
+			// i = call function that returns new int[2] -> we dont deal with this case
 			// etc i = new int[2]
 			// no store only memory allocation
 			llvm::AllocaInst *ral = expr->compile_alloc_mem(name);
@@ -847,8 +826,7 @@ public:
 			return nullptr;
 		}
 
-		llvm::Value *rhs = expr->compile();
-		// lhs works for id but not for direct access yet.
+		if (!rhs) rhs = expr->compile();
 		llvm::Value *lhs = atom->compile_alloc();
 		if (!lhs) {
 			llvm::AllocaInst *al;
@@ -869,7 +847,7 @@ public:
 				lhs = al;
 				Builder.CreateStore(e->val, lhs);
 				llvm::Value *ptr = Builder.CreateLoad(lhs, name);
-				// if (calltype == "glob") lhs = ptr;
+				if (calltype == "glob") lhs = ptr;
 				Builder.CreateStore(rhs, ptr);
 				ref = 1;
 			}
@@ -877,32 +855,37 @@ public:
 		if (rhs == llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(i32)) &&
 					e->type == Tlist)
 		{
-			// assign nil to list
+			// assign the right type of nil to list
 			llvm::Type *list_type = (lhs->getType())->getPointerElementType()->getPointerElementType();
 			rhs = llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(list_type));
 		}
 		else if (e->type == Tlist){
 			string rname = expr->getId();
 			if (rname == "_ithasnoid") rname = rhs->getName();
-			// string rname = rhs->getName();
-			// cout << rname << endl;
 			ValueEntry *rse = vt.lookup(rname + "_size");
 			int rsize = rse->lsize;
 			vt.insert(name + "_size", rsize);
 		}
 
-		if ((rhs->getType())->isArrayTy()){
+		llvm::Type *rtype = rhs->getType();
+		llvm::Type *ltype = lhs->getType();
+		if (rtype->isArrayTy()){
 			// right side is a defined array
 			string rnme = expr->getId();
 			ValueEntry *re = vt.lookup(rnme);
-			llvm::Type* eltype = (rhs->getType())->getArrayElementType();
+			llvm::Type* eltype = rtype->getArrayElementType();
 			rhs = Builder.CreateBitCast(re->alloc, llvm::PointerType::getUnqual(eltype), "ptr");
 		}
-		else if ((rhs->getType())->isPointerTy()
-			&& ((rhs->getType())->getPointerElementType())->isArrayTy()) {
+		else if (rtype->isPointerTy()
+			&& rtype->getPointerElementType()->isArrayTy()) {
 				// right side is a new memory allocation
-				llvm::Type* eltype = ((rhs->getType())->getPointerElementType())->getArrayElementType();
+				llvm::Type* eltype = rtype->getPointerElementType()->getArrayElementType();
 				rhs = Builder.CreateBitCast(rhs, llvm::PointerType::getUnqual(eltype), "ptr");
+		}
+		else if (rtype->isPointerTy() && ltype->getPointerElementType()->isArrayTy()){
+			// return val is ptr and var is an array
+			rhs = Builder.CreateBitCast(rhs, ltype, "retarray");
+			rhs = Builder.CreateLoad(rhs, "callval");
 		}
 		if (!ref) Builder.CreateStore(rhs, lhs);
 
@@ -966,18 +949,22 @@ public:
 			for(shared_ptr<Expr> e: *exprList) {
 				llvm::Value *v = e->compile_check_call(true, func_name, i);
 				argsv.push_back(v);
+				// ValueEntry *se = vt.lookup((string)v->getName() + "_size");
+				// if (se) cout << (string)v->getName() << " -> " << se->lsize << endl;
 				i++;
 			}
 
 		unsigned idx = 0;
 		unsigned size = argsv.size();
-		// cout << "--- call ---- " << func_name << endl;
+		// add to the call the gobal variables
 		for (auto &Arg : func_value->args())
 			if (idx++ >= size){
 				string argname = Arg.getName();
 				ValueEntry *e = vt.lookup(argname);
 				llvm::Value *argval = e->alloc;
 				if (argval == nullptr){
+					// if no new value has been added insided this function
+					// gives warning ...
 					e = vt.lookup(argname, true);
 					argval = e->alloc;
 					llvm::AllocaInst *al2 = Builder.CreateAlloca(argval->getType(), nullptr, argname);
@@ -986,10 +973,9 @@ public:
 					llvm::Value *v = Builder.CreateLoad(al2, argname);
 					argsv.push_back(v);
 				}
-				else{
-					// cout << (e->val == e->alloc) << endl;
-					argsv.push_back(e->alloc);
-				}
+				else
+					argsv.push_back(e->val);
+					// else add the new value
 			}
 		if (func_value->getReturnType() == llvm::Type::getVoidTy(TheContext))
 			return Builder.CreateCall(func_value, argsv);
@@ -1021,9 +1007,7 @@ public:
 		return compile();
 	}
 	virtual llvm::Value* compile() const override {
-		llvm::Value *ret =  call->compile();
-		return ret;
-
+		return call->compile();
 	}
 	virtual llvm::Value* compile_alloc() const override {
 		return nullptr;
@@ -1053,8 +1037,23 @@ public:
 	virtual llvm::Value* compile() const override {
 		retval = true;
 		if (llvm::Value *RetVal = ret_val->compile()) {
-			// Finish off the function.
-				Builder.CreateRet(RetVal);
+			string name = RetVal->getName();
+			ValueEntry *e = vt.lookup(name + "_size");
+			// if it returns a list save its size to the outer scope
+			if (e) vt.insert("calltmp_size", e->lsize, true);
+			llvm::Type *rettype = RetVal->getType();
+			if (rettype->isArrayTy()){
+				// if it returns an array cast it to pointer and save its size
+				RetVal = ret_val->compile_alloc();
+				// cout << "yes it is array " << name << endl;
+				// unsigned size = rettype->getArrayNumElements();
+				// string func_name = Builder.GetInsertBlock()->getParent()->getName();
+				// cout << func_name << endl;
+				// vt.insert(func_name + "_size", size, true);
+				llvm::Value *RetPtr = Builder.CreateBitCast(RetVal, llvm::PointerType::getUnqual(rettype->getArrayElementType()), "ptr");
+				Builder.CreateRet(RetPtr);
+			}
+			else Builder.CreateRet(RetVal);
 			return RetVal;
 		}
 		else return Builder.CreateRetVoid();
@@ -1126,7 +1125,6 @@ public:
 			ElseBB->eraseFromParent();
 			Builder.CreateCondBr(cond, ThenBB, AfterBB);
 		}
-
 		Builder.SetInsertPoint(ThenBB);
 		for(shared_ptr<Stmt> s: *cond_true) s->compile();
 		if (!retval) Builder.CreateBr(AfterBB);
@@ -1155,8 +1153,6 @@ public:
 			Builder.CreateBr(AfterBB);
 		}
     Builder.SetInsertPoint(AfterBB);
-		// TODO: problem when there is no other body in the afterBB afterwards
-		// retval = false;
 		return AfterBB;
 	}
 	void setAfterBB(llvm::BasicBlock *AfterBB){
@@ -1266,13 +1262,11 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
-		// TODO: call by ref how?
 		for(const char* i: *idl) {
 			string name = string(i);
 			llvm::AllocaInst *a = nullptr;
-			if (call_by_reference){
+			if (call_by_reference)
 				vt.insert(name, a, "ref");
-			}
 			else vt.insert(name, a, "val");
 		}
 		return nullptr;
@@ -1341,12 +1335,22 @@ public:
 			for(Formal *f: *fl)
  				f->sem();
 	}
+	llvm::Type* convertType(Type type) const{
+		if (type.p == TYPE_int) return i32;
+		else if (type.p == TYPE_bool) return i1;
+		else if (type.p == TYPE_char) return i8;
+		else if (type.p == TYPE_null) return llvm::Type::getVoidTy(TheContext);
+		return llvm::PointerType::getUnqual(convertType(type.c->getType()));
+	}
 	virtual llvm::Value* compile() const override {
 		bool main = false;
 		string func_name = string(id);
 		if (func_name == "main") func_name = "jackthecutestdoggo";
+		// we already have a main - resolving conflict
 		if(vt.EmptyScopes()){
+			// open scope if it is the first function defined
 			vt.openScope();
+			// add library declarations
 			vt.insert("puti",Puti);
 			vt.insert("putb",Putb);
 			vt.insert("putc",Putc);
@@ -1364,12 +1368,7 @@ public:
 			vt.insert("strcat",Strcat);
 			main = true;
 		}
-		llvm::Type *func_type;
-		if (type.p == TYPE_int) func_type = i32;
-		else if (type.p == TYPE_bool) func_type = i1;
-		else if (type.p == TYPE_char) func_type = i8;
-		else func_type = llvm::Type::getVoidTy(TheContext);
-
+		llvm::Type *func_type = convertType(type);
 		// adding parameters' type in Function Type
 		vector<llvm::Type*> params = {};
 		// Set names for all arguments.
@@ -1378,11 +1377,7 @@ public:
 		if (fl)
 			for(Formal *f: *fl) {
 				pair<Type, int> pair_type = f->getType();
-				llvm::Type *llvm_pair_type;
-				if (pair_type.first.p == TYPE_int) llvm_pair_type = i32;
-				else if (pair_type.first.p == TYPE_bool) llvm_pair_type = i1;
-				else if (pair_type.first.p == TYPE_char) llvm_pair_type = i8;
-				// array and list type?
+				llvm::Type *llvm_pair_type = convertType(pair_type.first);
 				if (f->getTypeOfCall()) llvm_pair_type = llvm::PointerType::getUnqual(llvm_pair_type);
 				params.insert(params.end(), pair_type.second, llvm_pair_type);
 				bool call_by_reference = f->getTypeOfCall();
@@ -1393,8 +1388,7 @@ public:
 					if (call_by_reference) refs[name] = nullptr;
 				}
 			}
-		// adding global variables
-		// cout << "------" << func_name << endl;
+		// adding global variables to the parameters
 		map<string, llvm::Type*> globalParams = vt.getGlobal();
 		map<string, llvm::Type*>::iterator it;
 		for (it = globalParams.begin(); it != globalParams.end(); it++)
@@ -1416,16 +1410,10 @@ public:
 		for (auto &Arg : F->args())
 		  Arg.setName(Args[Idx++]);
 		vt.insert(func_name, F, refs);
+		// open the scope of the new function and add the formal params
 		vt.openScope();
 		if (fl)
-			for(Formal *f: *fl) {
-				f->compile();
-			}
-
-		// llvm::BasicBlock *CurrentBB = Builder.GetInsertBlock();
-		// cout << (string)CurrentBB->getName() << endl;
-		// if (!main & CurrentBB->empty()){ cout << "empty" << endl; CurrentBB->eraseFromParent(); }
-		// if (!main){ Builder.CreateBr(EndFunc);}
+			for(Formal *f: *fl) f->compile();
 		return nullptr;
 	}
 	string getId() {
@@ -1485,35 +1473,34 @@ public:
 		// First, check for an existing function from a previous 'extern' declaration.
 		string func_name = hd->getId();
 		if (func_name == "main") func_name = "jackthecutestdoggo";
+		// cout << "----- " << func_name << endl;
 		llvm::Function *ParentFunc = Builder.GetInsertBlock()->getParent();
-		// llvm::BasicBlock *EndFunc =
-    //   llvm::BasicBlock::Create(TheContext, "continue", ParentFunc);
 		llvm::BasicBlock &ParentEntry = ParentFunc->getEntryBlock();
 		llvm::BasicBlock *ParentEntry1 = &ParentEntry;
+		// if function has been declared how and where??
 		// llvm::Function *TheFunction = TheModule->getFunction(func_name);
 		// // if the function has not be declared do it!
-		// if (!TheFunction){
-		//   hd->compile(EndFunc);
-		// 	ValueEntry *e = vt.lookup(func_name);
-		// 	TheFunction = e->func;
-		// }
 		hd->compile();
+		// cout << "after head" << endl;
 		ValueEntry *e = vt.lookup(func_name);
 		llvm::Function *TheFunction = e->func;
 		// Create a new basic block to start insertion into.
 		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
 		Builder.SetInsertPoint(BB);
-
+		// get the name and the value of the arguments
 		for (auto &Arg : TheFunction->args()){
 			string argname = Arg.getName();
 			ValueEntry *e = vt.lookup(argname);
 			if (e) vt.insert(argname, nullptr, "glob");
 			vt.insert(argname, &Arg);
 		}
+		// cout << "before def" << endl;
 		for(shared_ptr<Def> d: *defl) d->compile();
+		// cout << "before stmt" << endl;
 		for(shared_ptr<Stmt> s: *stmtl) s->compile();
+		// cout << "hm " << endl;
 		if (Builder.GetInsertBlock()->empty()){
-			// if return stmt are in Branch
+			// if return stmt are in Branches add decorative return
 			llvm::Type *func_type = TheFunction->getReturnType();
 			if (func_type == i1) Builder.CreateRet(c1(0));
 			else if (func_type == i8) Builder.CreateRet(c8(0));
@@ -1557,9 +1544,8 @@ public:
 		if (type.p == TYPE_int) return i32;
 		else if (type.p == TYPE_bool) return i1;
 		else if (type.p == TYPE_char) return i8;
-		// TODO: check this not sure!
-		else if (!type.p) return llvm::PointerType::getUnqual(convertType(type.c->getType()));
-		return llvm::Type::getVoidTy(TheContext);
+		else if (type.p == TYPE_null) return llvm::Type::getVoidTy(TheContext);
+		return llvm::PointerType::getUnqual(convertType(type.c->getType()));
 	}
 	virtual llvm::Value* compile() const override {
 		// get details from header

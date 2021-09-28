@@ -1,5 +1,6 @@
 def main ():
-	int n
+	decl bool prime? (int n)
+	int a
 	def bool prime? (int n):
     int i
 		puti(n)
@@ -25,7 +26,7 @@ def main ():
   counter := 10
 	c := prime?(counter)
 	%geti()
-	putb(prime?(counter))
+	%putb(prime?(counter))
 	%puts("/n")
 	%strlen("Ciao")
 	c := prime?(9)

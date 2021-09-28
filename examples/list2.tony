@@ -2,32 +2,34 @@ def main ():
   int pivot, x
   bool b
   list[int] lt, ge
+  list[char] lcr
 
   x := 0
   lt := nil
   ge := nil
 
   b := nil?(nil)
-	putb(b)
-	putb(nil?(lt))
-	putb(nil?(ge))
+	%putb(b)
+	%putb(nil?(lt))
+	%putb(nil?(ge))
+  lcr := 'a' # nil
   lt := 23 # nil
   lt := 27 # lt
   ge := 76 # lt
   x := head(ge)
-	puti(x)
+	%puti(x)
   x := head(lt)
-	puti(x)
+	%puti(x)
   lt := 32 # 72 # lt
   x := head(lt)
-	puti(x)
+	%puti(x)
   ge := lt
   x := head(ge)
-	puti(x)
+	%puti(x)
 	ge := tail(lt)
 	%puti(ge)
   x := head(ge)
-	puti(x)
+	%puti(x)
   x := head(tail(lt))
-	puti(x)
+	%puti(x)
 end

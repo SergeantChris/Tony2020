@@ -19,3 +19,7 @@ def main ():
 	%prime(a)
 
 end
+
+%ni3 = alloca i32*, align 8
+%store i32* %ni, i32** %ni3
+%ni4 = load i32*, i32** %ni3

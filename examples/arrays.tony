@@ -3,19 +3,20 @@ def main ():
   int[][] i
   int d
   d := 25
-	puti(d)
+	%puti(d)
   a := new int[2]
   i := new int[][2]
   a[1] := d
-	puti(a[1])
+  a[0] := 45
+	%puti(a[1])
   i[0] := a
   i[1] := new int[2]
   d := a[1]
-	puti(d)
+	%puti(d)
   %a := i[0]
   i[1][1] := d
-	puti(i[1][1])
+	%puti(i[1][1])
   d := i[1][1]
-	puti(d)
+	%puti(d)
   %puti(1)
 end
