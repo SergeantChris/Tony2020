@@ -1,0 +1,4 @@
+def main():
+	char a
+	a := '\0'
+end

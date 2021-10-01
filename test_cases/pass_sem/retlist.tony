@@ -1,0 +1,6 @@
+def main():
+	def list[int] littul():
+		return 6#5#4#nil
+	end
+	puti(littul()[0])
+end

@@ -1,11 +1,14 @@
 #include "symbol.hpp"
+#include "type.hpp"
 
 using namespace std;
 
 
-SymbolEntry::SymbolEntry() {} // was this supposed to be destructor
+SymbolEntry::SymbolEntry() {}
 
-SymbolEntry::SymbolEntry(Type t, int ofs, string fr, vector<Formal*>* v): type(t), offset(ofs), from(fr), params(v) {} // inits for var
+SymbolEntry::SymbolEntry(Type t, int ofs, string fr, vector<Formal*>* v): type(t), offset(ofs), from(fr), params(v) {}
+
+// SymbolEntry::~SymbolEntry() { del_entries(params); delete params; } // would fix memory leak but leads to error free(): invalid pointer
 
 
 ostream& operator<<(ostream &out, const SymbolEntry e) {
@@ -13,6 +16,7 @@ ostream& operator<<(ostream &out, const SymbolEntry e) {
 	return out;
 }
 
+//----------------------------------------- SEMANTICS ------------------------------------------------
 
 Scope::Scope(int ofs): locals(), offset(ofs), size(0) {}
 
@@ -31,9 +35,16 @@ SymbolEntry* Scope::lookup(string c, string def) {
 	}
 }
 void Scope::insert(string c, Type t, string def, vector<Formal*>* v) {
+	ostringstream formatted;
 	if (def == "var"){
-		if (locals.find(c) != locals.end()) error("Duplicate variable: %s", c);
-		if (funcs.find(c) != funcs.end()) error("Duplicate id (this name is already used by a function): %s", c);
+		if (locals.find(c) != locals.end()) {
+			formatted << "Duplicate variable: " << c;
+			error(formatted.str());
+		}
+		if (funcs.find(c) != funcs.end()) {
+			formatted << "Duplicate id (this name is already used by a function): " << c;
+			error(formatted.str());
+		}
 		#if PRE_DEBUG
 			cout << "Inserting Var: " << c << " into locals" << endl;
 		#endif
@@ -41,8 +52,16 @@ void Scope::insert(string c, Type t, string def, vector<Formal*>* v) {
     ++size;
 	}
 	else {
-		if (funcs.find(c) != funcs.end()) error("Duplicate function name: %s", c);
-		if (locals.find(c) != locals.end()) error("Duplicate id (this name is already used by a function): %s", c);
+		if (funcs.find(c) != funcs.end()) {
+			if(!(def == "func_def") || !(funcs[c].from == "func_decl")) {
+				formatted << "Duplicate function name: " << c;
+				error(formatted.str());
+			}
+		}
+		if (locals.find(c) != locals.end()) {
+			formatted << "Duplicate id (this name is already used by a variable): " << c;
+			error(formatted.str());
+		}
 		#if PRE_DEBUG
 			cout << "Inserting Fun: " << c << " into funcs" << endl;
 		#endif
@@ -80,7 +99,16 @@ SymbolEntry* SymbolTable::lookup(string c, string def) {
   }
   return nullptr;
 }
-void SymbolTable::insert(string c, Type t, string def, vector<Formal*>* v) {
+void SymbolTable::insert(string c, Type t, string def, vector<Formal*>* v, bool built_in) {
+	if(def!="var" && !built_in && scopes.size()==1) {
+		Type main_type;
+		main_type.p = TYPE_void;
+		if(!(t == main_type) || v!=nullptr) {
+			ostringstream formatted;
+			formatted << "Program's main function " << c << " must take no arguments and return no value";
+			error(formatted.str());
+		}
+	}
   scopes.back().insert(c, t, def, v);
 }
 int SymbolTable::getSizeOfCurrentScope() const {
@@ -93,6 +121,8 @@ Type SymbolTable::getReturnType() const {
 bool SymbolTable::EmptyScopes() const{
 	return scopes.empty();
 }
+
+//----------------------------------------- COMPILE ------------------------------------------------
 
 CompileScope::CompileScope(int ofs) : defined(), offset(ofs), size(0) {}
 

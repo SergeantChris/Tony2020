@@ -2,4 +2,5 @@ def hello ():
   char[] string
   string := "test"
   puts("Hello world!\n")
+  puts("Goodbye world!\n")
 end

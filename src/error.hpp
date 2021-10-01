@@ -1,14 +1,12 @@
 #ifndef __ERROR_H__
 #define __ERROR_H__
 
-
 #include <iostream>
 #include <cstdarg>
 #include <string>
 #include <vector>
 
-#include "error.hpp"
-// #include "general.h"
+using namespace std;
 
 
 /* FOREGROUND */
@@ -34,9 +32,7 @@
 
 extern int linecount;
 
-// void internal (const std::string sFormat, ...);
-void error(const std::string sFormat, ...);
-// void warning (const std::string sFormat, ...);
+void error(const string formatted);
 
 
 #endif

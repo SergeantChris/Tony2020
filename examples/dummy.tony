@@ -1,4 +1,0 @@
-def main ():
-	char a
-	a := 'a'
-end

@@ -76,7 +76,7 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 	vector<shared_ptr<Def>>* defl;
 	Header* h;
 	Formal* frml;
-	vector< Formal*>* fl;
+	vector<Formal*>* fl;
 	vector<const char*>* idl;
 	Type type;
 	Stmt* stmt;
@@ -114,25 +114,25 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 
 program:
 	func_def  {
-		/* cout << "-------------------------------------------------------- AST --------------------------------------------------------" << std::endl;
-		cout << *$1 << endl;
-    cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << std::endl; */
+		//cout << "-------------------------------------------------------- AST --------------------------------------------------------" << endl;
+		//cout << *$1 << endl;
+	  //cout << endl << "----------------------------------------------------- SEMANTICS -----------------------------------------------------" << endl;
 		st.openScope();
+		//cout << endl << "#######################--- inserting all built in functions in ST ---#######################" << endl;
 		lib->init(); // Initialize all built in functions and procedures
+		//cout << "#######################################################################################" << endl << endl;
 		$1->sem();
 		st.closeScope();
-
 		/* cout << endl << "------------------------------------------------------- LLVM --------------------------------------------------------" << std::endl; */
 		$1->llvm_compile_and_dump(opt_flag);
 		delete $1;
 		vt.closeScope();
-		return 0;
+		//return 0;
 	}
 ;
 
 func_def:
   "def" header ':' func_list stmt_list "end"  { $$ = new FuncDef($2, $4, $5); }
-
 ;
 
 func_list:
@@ -244,7 +244,7 @@ expr_list:
 
 atom:
 	T_id								{ $$ = new Id($1); }
-| T_string						{ $$ = new String($1); } // TODO: semcheck can we Assign to string atoms
+| T_string						{ $$ = new String($1); }
 | atom '[' expr ']'		{ $$ = new DirectAcc($1, $3); }
 | call								{ $$ = new ReturnValue($1); }
 ;
@@ -310,6 +310,6 @@ int main(int argc, char* argv[]) {
   }
   yyin = f;
   int result = yyparse();
-  /* if (result == 0) printf("Success.\n"); */
+  cout << "Success." << endl;
   return result;
 }

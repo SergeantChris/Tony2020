@@ -1,0 +1,4 @@
+def main():
+	int[][] a
+	a := new int[][10] % or int[][]
+end

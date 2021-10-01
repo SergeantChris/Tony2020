@@ -1,0 +1,11 @@
+def main():
+	decl int gaga()
+	decl char googoo()
+	def int gaga():
+		return 1
+	end
+	def char googoo():
+		return 'r'
+	end
+	skip
+end
