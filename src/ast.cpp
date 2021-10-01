@@ -287,10 +287,9 @@ void Expr::typeCheck(CompositeType* c1, CompositeType* c2) { // overloading for 
 	Type t2;
 	t2.c = c2;
 	#if PRE_DEBUG
-	cout << "-- TYPE CHECK  ("<< type << ", " << t1 << " OR " << t2 << ")";
+	cout << "-- TYPE CHECK  ("<< type << ", " << t1 << " OR " << t2 << endl;
 	#endif
 	if(!(type == t1) && !(type == t2)){
-		cout << endl;
 		ostringstream formatted;
 		formatted << "Type mismatch, expected " << c1->getId() << " or " << c2->getId() << " kind of type, but " << type << " was used";
 		error(formatted.str());
@@ -579,11 +578,11 @@ const char* Id::getId() {
 }
 void Id::sem() {
 	#if PRE_DEBUG
-		cout << "Searching for: " << id << " ... ";
+	cout << "Searching for: " << id << " ... ";
 	#endif
 	SymbolEntry *e = st.lookup(string(id));
 	#if PRE_DEBUG
-		cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
+	cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
 	#endif
 	type = e->type;
 }
@@ -832,7 +831,9 @@ void Call::printNode(ostream &out) const {
 }
 void Call::sem() {
 	// checks if the function is defined
+	#if PRE_DEBUG
 	cout << "Looking up for definition of the function ..." << endl;
+	#endif
 	SymbolEntry *func = st.lookup(string(id), "func_def");
 	vector<Formal*>* params = func->params;
 	type = func->type;
@@ -945,12 +946,14 @@ void Return::sem() {
 	if(ret_val != nullptr) {
 		ret_val->sem();
 		#if PRE_DEBUG
-			cout << "Checking return type ..." << endl;
+		cout << "Checking return type ..." << endl;
 		#endif
 		ret_val->typeCheck(st.getReturnType());
 	}
 	else {
+		#if PRE_DEBUG
 		cout << "Checking return type ..." << endl;
+		#endif
 		Type rv_type;
 		rv_type.p = TYPE_void;
 		Type r_type = st.getReturnType();
@@ -1202,7 +1205,7 @@ void Header::printNode(ostream &out) const {
 void Header::sem(bool func) {
 	if (!st.EmptyScopes()){
 		#if PRE_DEBUG
-			cout << "Looking up for declaration of the function ... " << endl;
+		cout << "Looking up for declaration of the function ... " << endl;
 		#endif
 		SymbolEntry *e = st.lookup(id, "func_decl");
 		vector<Formal*>* params;
@@ -1227,7 +1230,7 @@ void Header::sem(bool func) {
 			if ((def == "func_def") && func) error("Duplicate function definition");
 			else if (!func) error("Duplicate function declaration");
 			else {
-				if (!(e->type == type)) error("Mismatch in function definition: %s", id);
+				if (!(e->type == type)) error("Mismatch in function definition");
 				vector<Formal*>* decl_params = e->params;
 				if(decl_params != nullptr) {
 					int i=0;
@@ -1255,7 +1258,7 @@ void Header::sem(bool func) {
 	}
 	st.openScope();
 	#if PRE_DEBUG
-		cout << "+++ Opening new scope!" << endl;
+	cout << "+++ Opening new scope!" << endl;
 	#endif
 	if((fl != nullptr) & func) {
 		for(Formal* f: *fl) {
@@ -1391,7 +1394,7 @@ void FuncDef::sem() {
 	for(shared_ptr<Stmt> s: *stmtl) s->sem();
 	size = st.getSizeOfCurrentScope();
 	#if PRE_DEBUG
-		cout << "--- Closing scope!" << endl;
+	cout << "--- Closing scope!" << endl;
 	#endif
   st.closeScope();
 }
@@ -1454,7 +1457,7 @@ void FuncDecl::printNode(ostream &out) const {
 void FuncDecl::sem() {
 	hd->sem(false);
 	#if PRE_DEBUG
-		cout << "--- Closing scope!" << endl;
+	cout << "--- Closing scope!" << endl;
 	#endif
 	st.closeScope();
 }
