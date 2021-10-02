@@ -14,7 +14,6 @@
 
 using namespace std;
 
-
 class Formal;
 
 struct SymbolEntry {
@@ -60,18 +59,19 @@ private:
 
 extern SymbolTable st;
 
-
+// llvm value table below
 struct ValueEntry {
 	llvm::Value *val;
 	llvm::Function *func;
-	llvm::AllocaInst *alloc;
 	int lsize; //size of a particular list
+	llvm::AllocaInst *alloc;
   int offset;
 	string call; // call by ref or val or not a parameter (default = no)
 	generalType type;
 	map<string, llvm::Value*> refs; // call by ref parameters
   ValueEntry() {}
-	ValueEntry(int s, int ofs) : lsize(s), offset(ofs) {}
+	// ValueEntry(int s, int ofs) : lsize(s), offset(ofs) {}
+	ValueEntry(int s, llvm::AllocaInst* a, int ofs) : lsize(s), alloc(a), offset(ofs) {}
   ValueEntry(llvm::Value *v, int ofs) : val(v), offset(ofs) {}
 	ValueEntry(llvm::Function *f, int ofs, map<string, llvm::Value*> r) : func(f), offset(ofs), refs(r) {}
 	ValueEntry(llvm::AllocaInst *a, int ofs, string c, generalType t) :
@@ -80,13 +80,12 @@ struct ValueEntry {
 	}
 };
 
-
 class CompileScope {
 public:
   CompileScope(int ofs = -1);
   ValueEntry * lookup(string c);
   void insert(string c, llvm::Value *v);
-	void insert(string c, int s);
+	void insert(string c, int s, llvm::AllocaInst *a);
 	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs);
 	void insert(string c, llvm::AllocaInst *a, string call, generalType type);
 	map<string, ValueEntry> getMap() const;
@@ -96,7 +95,7 @@ private:
 	map<string, ValueEntry> defined;
   int offset;
   int size;
-	std::vector<int> v;
+	vector<int> v;
 };
 
 class ValueTable {
@@ -105,14 +104,15 @@ public:
   void closeScope();
   ValueEntry * lookup(string c, bool glob = false);
   void insert(string c, llvm::Value *v);
-	void insert(string c, int lsize);
+	void insert(string c, int lsize, bool call_list = false, llvm::AllocaInst *a = nullptr);
 	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs = {});
-	void insert(string c, llvm::AllocaInst *a, string call = "no", generalType type = Tnull);
+	void insert(string c, llvm::AllocaInst *a, string call = "no",
+              generalType type = Tnull, bool call_list = false);
   int getSizeOfCurrentScope() const;
 	bool EmptyScopes() const;
 	map<string, llvm::Type*> getGlobal() const;
 private:
-  std::vector<CompileScope> scopes;
+  vector<CompileScope> scopes;
 };
 
 extern ValueTable vt;

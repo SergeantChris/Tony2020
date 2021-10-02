@@ -136,10 +136,10 @@ void CompileScope::insert(string c, llvm::Value *v) {
 		defined[c].val = v;
 }
 
-void CompileScope::insert(string c, int s) {
+void CompileScope::insert(string c, int s, llvm::AllocaInst *a) {
 	if (defined.find(c) != defined.end()) defined[c].lsize = s;
 	else {
-		defined[c] = ValueEntry(s, offset++);
+		defined[c] = ValueEntry(s, a, offset++);
 		++size;
 	}
 }
@@ -182,7 +182,6 @@ ValueEntry* ValueTable::lookup(string c, bool glob) {
 	for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
 		ValueEntry *e = i->lookup(c);
 		if (glob && i == scopes.rbegin()) continue;
-		// cout << "hm " << endl;
 		if (e != nullptr) return e;
 	}
 	return nullptr;
@@ -195,15 +194,17 @@ void ValueTable::insert(string c, llvm::Value *v) {
 	}
 }
 
-void ValueTable::insert(string c, int lsize) {
-	scopes.back().insert(c, lsize);
+void ValueTable::insert(string c, int lsize, bool call_list, llvm::AllocaInst *a) {
+	if (call_list) (scopes.rbegin()[1]).insert(c, lsize, a);
+	else scopes.back().insert(c, lsize, a);
 }
 
 void ValueTable::insert(string c, llvm::Function *f, map<string, llvm::Value*> refs) {
 	scopes.back().insert(c, f, refs);
 }
 
-void ValueTable::insert(string c, llvm::AllocaInst *a, string call, generalType type) {
+void ValueTable::insert(string c, llvm::AllocaInst *a, string call, generalType type, bool call_list) {
+	if (call_list) (scopes.rbegin()[1]).insert(c, a, call, type);
 	scopes.back().insert(c, a, call, type);
 }
 
@@ -225,7 +226,6 @@ map<string, llvm::Type*> ValueTable::getGlobal() const {
 			ValueEntry sec = it->second;
 			if (sec.alloc != nullptr && sec.func == nullptr){
 				string name = it->first;
-				// cout << name << endl;
 				if (params.find(name) == params.end()) params[name] = sec.alloc->getType();
 			}
 		}

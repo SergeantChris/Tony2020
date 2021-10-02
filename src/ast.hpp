@@ -11,7 +11,6 @@
 #include "symbol.hpp"
 #include "type.hpp"
 
-
 #include <llvm/IR/Value.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Verifier.h>
@@ -125,7 +124,7 @@ public:
 	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const {return nullptr;}
 	virtual llvm::Value* compile_alloc() const {return nullptr;}
 	virtual llvm::AllocaInst* compile_alloc_mem(string name ) const {return nullptr;}
-	virtual const char* getId() {return "_noid";}
+	virtual const char* getId() {return "_ithasnoid";}
 
 protected:
   Type type;
@@ -367,10 +366,12 @@ public:
 	virtual void sem() override;
 	vector<Formal*>* getOpenedFormal();
 	Type getType();
+	pair<Type, int> getSize();
 	vector<const char*>* getIds();
 	bool getCb();
 	virtual llvm::Value* compile() const override;
 	int getCountofIds();
+	bool getTypeOfCall();
 
 private:
 	Type type;
@@ -384,6 +385,7 @@ public:
 	~Header();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem(bool func = true);
+	llvm::Type* convertType(Type type, bool params = true) const;
 	virtual llvm::Value* compile() const override;
 	string getId();
 	bool isVoid();
