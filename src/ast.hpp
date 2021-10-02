@@ -491,18 +491,26 @@ public:
 			// string lname = expr->getId();
 			string sname = lname + "_size";
 			ValueEntry *e = vt.lookup(sname);
-			int lsize = e->lsize;
-		  llvm::Value *retval = Builder.CreateInBoundsGEP((val->getType())->getPointerElementType(), val,  c32(lsize - 1), "head");// return the first value of the List
+			// int lsize = e->lsize;
+			llvm::Value *size = Builder.CreateLoad(e->alloc, sname);
+			size = Builder.CreateSub(size, c32(1), "listidx");
+		  llvm::Value *retval = Builder.CreateInBoundsGEP((val->getType())->getPointerElementType(), val,  size, "head");// return the first value of the List
 			return Builder.CreateLoad(retval, "headval");
 		 }
 		else if(op == "tail") {
 			string lname = expr->getId();
 			string sname = lname + "_size";
 			ValueEntry *e = vt.lookup(sname);
-			int lsize = e->lsize;
-			lsize--;
+			llvm::Value *size = Builder.CreateLoad(e->alloc, sname);
+			size = Builder.CreateSub(size, c32(1), "listidx");
+			// Builder.CreateStore(size, e->alloc);
+			// int lsize = e->lsize;
+			// lsize--;
 			string valname = val->getName();
-			vt.insert(valname + "_size", lsize);
+			llvm::AllocaInst *sal = Builder.CreateAlloca(i32, nullptr, valname + "_size");
+			Builder.CreateStore(size, sal);
+			vt.insert(valname + "_size", sal);
+			// vt.insert(valname + "_size", lsize);
 			return val; //return the last value of the list
 		}
 		else return nullptr;
@@ -576,20 +584,35 @@ public:
 				Builder.CreateStore(l, elem);
 				// size = 1
 				string sname = (string)retval->getName() + "_size";
-				vt.insert(sname, 1);
+				llvm::AllocaInst *sal = Builder.CreateAlloca(i32, nullptr, sname);
+				vt.insert(sname, sal);
+				Builder.CreateStore(c32(1), sal);
+				// vt.insert(sname, 1);
 				return retval;
 			}
 			string lname = expr2->getId();
 			if (lname == "_ithasnoid") lname = r->getName();
 			string sname = lname + "_size";
+			// cout << sname << endl;
 			ValueEntry *e = vt.lookup(sname);
 			if (!e) cout << "oops" << endl;
-			int lsize = e->lsize;
-			llvm::Value *v = Builder.CreateInBoundsGEP(seed_type, r,  c32(lsize), "lelalloc");
+			// int lsize = e->lsize;
+			llvm::Value *sval = Builder.CreateLoad(e->alloc, sname);
+			llvm::Value *v = Builder.CreateInBoundsGEP(seed_type, r,  sval, "lelalloc");
+			// llvm::Value *v = Builder.CreateInBoundsGEP(seed_type, r,  c32(lsize), "lelalloc");
 			Builder.CreateStore(l, v);
 			// not always!
+			// cout << "ok list store" << endl;
 			string sname_load = (string)r->getName() + "_size";
-			vt.insert(sname_load, lsize+1);
+			// cout << sname_load << endl;
+			llvm::AllocaInst *sal;
+			if (ValueEntry *se = vt.lookup(sname_load)) sal = se->alloc;
+			else sal = Builder.CreateAlloca(i32, nullptr, sname_load);
+			// vt.insert(sname_load, lsize+1);
+			sval = Builder.CreateAdd(sval, c32(1), sname_load);
+			Builder.CreateStore(sval, sal);
+			vt.insert(sname_load, sal);
+			// cout << "ok size store" << endl;
 			return r;
 		}
 		else if (op == "=") return Builder.CreateICmpEQ(l, r, "eqtmp");
@@ -710,6 +733,7 @@ public:
 			for (auto &Arg : func_value->args()){
 				string name = Arg.getName();
 				if (refs.count(name) & (i == index)){
+					// cout << name << endl;
 					ValueEntry *parentry = vt.lookup(var);
 					return parentry->alloc;
 				}
@@ -717,8 +741,10 @@ public:
 			}
 		}
 		if (e->alloc){
-			if (e->call == "glob") v = e->alloc;
+			if (e->call == "glob" || e->type == Tlist) v = e->alloc;
 			v = Builder.CreateLoad(v, var);
+			// cout << "call id -> " << var << endl;
+
 		}
 		if (e->call == "ref" || e->call == "glob")
 			return Builder.CreateLoad(v, var);
@@ -826,7 +852,10 @@ public:
 			return nullptr;
 		}
 
+		cout << "before rhs " << endl;
+		// the problem is in here!! so probably at # check it !
 		if (!rhs) rhs = expr->compile();
+		cout << "after rhs " << endl;
 		llvm::Value *lhs = atom->compile_alloc();
 		if (!lhs) {
 			llvm::AllocaInst *al;
@@ -834,10 +863,17 @@ public:
 			// if is call by value we just need to allocate memory and store (locally)
 			string calltype = e->call;
 			if (calltype == "val"){
+				cout << "here?" << endl;
 				al = Builder.CreateAlloca(rhs->getType(), nullptr, name);
-				al->setAlignment(4);
+				// al->setAlignment(4);
 				vt.insert(name, al);
 				lhs = al;
+				if (e->type == Tlist) {
+					llvm::AllocaInst *sal = Builder.CreateAlloca(i32, nullptr, name + "_size");
+					al->setAlignment(4);
+					if (vt.lookup(name + "_size")) cout << "call by value param is a list: " << name << endl;
+					vt.insert(name + "_size", sal);
+				}
 			}
 			else if (calltype == "ref" || calltype == "glob"){
 				//if call by ref we need PointerType to rhs->getType() and setAlignment(8)
@@ -862,9 +898,22 @@ public:
 		else if (e->type == Tlist){
 			string rname = expr->getId();
 			if (rname == "_ithasnoid") rname = rhs->getName();
+			// cout << rname << endl;
 			ValueEntry *rse = vt.lookup(rname + "_size");
-			int rsize = rse->lsize;
-			vt.insert(name + "_size", rsize);
+			if(!rse) {
+				string a = expr->getId();
+				cout << a << endl;
+			}
+			// if (rse) cout << rname + "_size" << endl;
+			// int rsize = rse->lsize;
+			// llvm::AllocaInst *rsal = rse->alloc;
+			// TODO: rse->alloc is in different function!
+			llvm::Value *rsv = Builder.CreateLoad(rse->alloc, rname + "_size");
+			// cout << "ok size load" << endl;
+			ValueEntry *lse = vt.lookup(name + "_size");
+			// cout << name + "_size" << endl;
+			// vt.insert(name + "_size", rsize, true,  lse->alloc);
+			Builder.CreateStore(rsv, lse->alloc);
 		}
 
 		llvm::Type *rtype = rhs->getType();
@@ -941,16 +990,45 @@ public:
 	virtual llvm::Value* compile() const override {
 		// Look up the name in the global module table.
 		string func_name = string(id);
+		// cout << "calling -> " << func_name << endl;
+
 		llvm::Function *func_value = TheModule->getFunction(func_name);
+		ValueEntry *fe = vt.lookup(func_value->getName());
+		map<string, llvm::Value*> refs = fe->refs;
 
 		int i = 0;
 		vector<llvm::Value *> argsv = {};
 		if (exprList)
 			for(shared_ptr<Expr> e: *exprList) {
+				string ename = e->getId();
 				llvm::Value *v = e->compile_check_call(true, func_name, i);
+				// cout << ename << endl;
+
 				argsv.push_back(v);
-				// ValueEntry *se = vt.lookup((string)v->getName() + "_size");
-				// if (se) cout << (string)v->getName() << " -> " << se->lsize << endl;
+				ValueEntry *ee = vt.lookup(ename);
+				if (ee)
+					if (ee->type == Tlist){
+						i++;
+						bool isRef = false;
+ 						// cout << "it is a lits " << ename << endl;//isList = true;
+						ValueEntry *se = vt.lookup(ename + "_size");
+						int j = 0;
+						for (auto &Arg : func_value->args()){
+							if (j < i) { j++; continue; }
+							string aname = Arg.getName();
+							if (refs.count(aname) & (i == j)){
+								// cout << aname << endl;
+								isRef = true;
+								break;
+							}
+							j++;
+						}
+						if (isRef) argsv.push_back(se->alloc);
+						else{
+							llvm::Value *sv = Builder.CreateLoad(se->alloc, ename + "_size");
+							argsv.push_back(sv);
+						}
+					}
 				i++;
 			}
 
@@ -977,6 +1055,7 @@ public:
 					argsv.push_back(e->val);
 					// else add the new value
 			}
+		// cout << "okay call -> " << func_name << endl;
 		if (func_value->getReturnType() == llvm::Type::getVoidTy(TheContext))
 			return Builder.CreateCall(func_value, argsv);
 		return Builder.CreateCall(func_value, argsv, "calltmp");
@@ -984,6 +1063,7 @@ public:
 	Type getType(){
 		return type;
 	}
+	string getId() const { return (string)id; }
 private:
 	const char* id;
 	vector<shared_ptr<Expr>>* exprList;
@@ -1012,6 +1092,7 @@ public:
 	virtual llvm::Value* compile_alloc() const override {
 		return nullptr;
 	}
+	string getId() const { return call->getId(); }
 private:
 	Call* call;
 };
@@ -1036,11 +1117,13 @@ public:
 	}
 	virtual llvm::Value* compile() const override {
 		retval = true;
+		string func_name = Builder.GetInsertBlock()->getParent()->getName();
 		if (llvm::Value *RetVal = ret_val->compile()) {
 			string name = RetVal->getName();
 			ValueEntry *e = vt.lookup(name + "_size");
 			// if it returns a list save its size to the outer scope
-			if (e) vt.insert("calltmp_size", e->lsize, true);
+			if (e)
+		  	vt.insert("calltmp_size", e->alloc, "no", Tint, true);
 			llvm::Type *rettype = RetVal->getType();
 			if (rettype->isArrayTy()){
 				// if it returns an array cast it to pointer and save its size
@@ -1262,12 +1345,17 @@ public:
 		}
 	}
 	virtual llvm::Value* compile() const override {
+		generalType t = Tnull;
+		if(type.p != TYPE_char && type.p != TYPE_int && type.p != TYPE_bool){
+			if (type.c->getId() == "list") t = Tlist;
+			else if (type.c->getId() == "array") t = Tarray;
+		}
 		for(const char* i: *idl) {
 			string name = string(i);
 			llvm::AllocaInst *a = nullptr;
 			if (call_by_reference)
-				vt.insert(name, a, "ref");
-			else vt.insert(name, a, "val");
+				vt.insert(name, a, "ref", t);
+			else vt.insert(name, a, "val", t);
 		}
 		return nullptr;
 	}
@@ -1335,11 +1423,13 @@ public:
 			for(Formal *f: *fl)
  				f->sem();
 	}
-	llvm::Type* convertType(Type type) const{
+	llvm::Type* convertType(Type type, bool params = true) const{
 		if (type.p == TYPE_int) return i32;
 		else if (type.p == TYPE_bool) return i1;
 		else if (type.p == TYPE_char) return i8;
 		else if (type.p == TYPE_null) return llvm::Type::getVoidTy(TheContext);
+		else if (type.c->getId() == "list" && !params)
+		 return llvm::StructType::get(TheContext, {llvm::PointerType::getUnqual(convertType(type.c->getType())), i32});
 		return llvm::PointerType::getUnqual(convertType(type.c->getType()));
 	}
 	virtual llvm::Value* compile() const override {
@@ -1368,24 +1458,45 @@ public:
 			vt.insert("strcat",Strcat);
 			main = true;
 		}
-		llvm::Type *func_type = convertType(type);
+		llvm::Type *func_type = convertType(type, false);
 		// adding parameters' type in Function Type
 		vector<llvm::Type*> params = {};
 		// Set names for all arguments.
 		vector<string> Args = {};
 		map<string, llvm::Value*> refs = {};
+		bool isList = false;
+		vector<string> listVars = {};
 		if (fl)
 			for(Formal *f: *fl) {
 				pair<Type, int> pair_type = f->getType();
+				if(pair_type.first.p != TYPE_char &&
+					 pair_type.first.p != TYPE_int &&
+					 pair_type.first.p != TYPE_bool &&
+					 pair_type.first.c->getId() == "list") isList = true;
 				llvm::Type *llvm_pair_type = convertType(pair_type.first);
 				if (f->getTypeOfCall()) llvm_pair_type = llvm::PointerType::getUnqual(llvm_pair_type);
-				params.insert(params.end(), pair_type.second, llvm_pair_type);
+				for (int j = 0; j < pair_type.second; j++){
+					params.push_back(llvm_pair_type);
+					if (isList){
+						// if param is list add the size of the list to the params
+						if (f->getTypeOfCall()) params.push_back(llvm::PointerType::getUnqual(i32));
+						else params.push_back(i32);
+					}
+				}
+				// params.insert(params.end(), pair_type.second, llvm_pair_type);
 				bool call_by_reference = f->getTypeOfCall();
 				vector<const char*>* idl = f->getIds();
 				for(const char* i: *idl) {
 					string name = string(i);
 					Args.push_back(name);
-					if (call_by_reference) refs[name] = nullptr;
+					if (isList){
+						Args.push_back(name + "_size");
+						listVars.push_back(name + "_size");
+					}
+					if (call_by_reference) {
+						refs[name] = nullptr;
+						if (isList) refs[name + "_size"] = nullptr;
+					}
 				}
 			}
 		// adding global variables to the parameters
@@ -1414,6 +1525,15 @@ public:
 		vt.openScope();
 		if (fl)
 			for(Formal *f: *fl) f->compile();
+		if (isList){
+			llvm::AllocaInst *a = nullptr;
+			for (long unsigned int j = 0; j < listVars.size(); j++){
+				// cout << listVars[j] << endl;
+				if (refs.find(listVars[j]) == refs.end()) vt.insert(listVars[j], a, "val");
+				else vt.insert(listVars[j], a, "ref");
+			}
+		}
+		// cout << "okay header -> " << func_name << endl;
 		return nullptr;
 	}
 	string getId() {
@@ -1501,6 +1621,7 @@ public:
 		// cout << "hm " << endl;
 		if (Builder.GetInsertBlock()->empty()){
 			// if return stmt are in Branches add decorative return
+			cout << "empty -> " << func_name << endl;
 			llvm::Type *func_type = TheFunction->getReturnType();
 			if (func_type == i1) Builder.CreateRet(c1(0));
 			else if (func_type == i8) Builder.CreateRet(c8(0));
@@ -1515,6 +1636,7 @@ public:
 		// vt.insert(func_name, TheFunction); //update
 		vt.closeScope();
 		Builder.SetInsertPoint(ParentEntry1);
+		cout << "okay funcdef -> " << func_name << endl;
 		return nullptr;
 	}
 private:
@@ -1622,6 +1744,7 @@ public:
 		else if (type.c->getId() == "list") {
 			isList = 1;
 			vtype = llvm::PointerType::getUnqual(defineListType(type.c->getType()));
+			// vtype = llvm::StructType::get(TheContext, {ptr, i32});
 		}
 		// else continue;
 		for(const char* i: *idl){
@@ -1632,7 +1755,10 @@ public:
 				vt.insert(name, IdAlloc, "no", Tlist);
 				// keep the size of the list in variable!
 				string sname = name + "_size";
-				vt.insert(sname, 0);
+				llvm::AllocaInst *sizeAlloc = Builder.CreateAlloca(i32, nullptr, sname);
+				sizeAlloc->setAlignment(4);
+				Builder.CreateStore(c32(0), sizeAlloc);
+				vt.insert(sname, sizeAlloc);
 			}
 			else {
 				IdAlloc->setAlignment(4);

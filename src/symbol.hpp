@@ -135,14 +135,15 @@ enum generalType { Tint, Tbool, Tchar, Tarray, Tlist, Tnull};
 struct ValueEntry {
 	llvm::Value *val;
 	llvm::Function *func;
-	llvm::AllocaInst *alloc;
 	int lsize; //size of a particular list
+	llvm::AllocaInst *alloc;
   int offset;
 	string call; // call by ref or val or not a parameter (default = no)
 	generalType type;
 	map<string, llvm::Value*> refs; // call by ref parameters
   ValueEntry() {}
-	ValueEntry(int s, int ofs) : lsize(s), offset(ofs) {}
+	// ValueEntry(int s, int ofs) : lsize(s), offset(ofs) {}
+	ValueEntry(int s, llvm::AllocaInst* a, int ofs) : lsize(s), alloc(a), offset(ofs) {}
   ValueEntry(llvm::Value *v, int ofs) : val(v), offset(ofs) {}
 	ValueEntry(llvm::Function *f, int ofs, map<string, llvm::Value*> r) : func(f), offset(ofs), refs(r) {}
 	ValueEntry(llvm::AllocaInst *a, int ofs, string c, generalType t) :
@@ -162,10 +163,10 @@ public:
   void insert(string c, llvm::Value *v) {
 			defined[c].val = v;
 	}
-	void insert(string c, int s) {
+	void insert(string c, int s, llvm::AllocaInst *a) {
 		if (defined.find(c) != defined.end()) defined[c].lsize = s;
 		else {
-			defined[c] = ValueEntry(s, offset++);
+			defined[c] = ValueEntry(s, a, offset++);
 	    ++size;
 		}
 	}
@@ -218,14 +219,16 @@ public:
       if (e != nullptr) i->insert(c, v);
     }
   }
-	void insert(string c, int lsize, bool call_list = false) {
-		if (call_list) (scopes.rbegin()[1]).insert(c, lsize);
-    else scopes.back().insert(c, lsize);
+	void insert(string c, int lsize, bool call_list = false, llvm::AllocaInst *a = nullptr) {
+		if (call_list) (scopes.rbegin()[1]).insert(c, lsize, a);
+    else scopes.back().insert(c, lsize, a);
   }
 	void insert(string c, llvm::Function *f, map<string, llvm::Value*> refs = {}) {
     scopes.back().insert(c, f, refs);
   }
-	void insert(string c, llvm::AllocaInst *a, string call = "no", generalType type = Tnull) {
+	void insert(string c, llvm::AllocaInst *a, string call = "no",
+	 						generalType type = Tnull, bool call_list = false) {
+		if (call_list) (scopes.rbegin()[1]).insert(c, a, call, type);
     scopes.back().insert(c, a, call, type);
 		// cout << c << " inswrting aloc" << endl;
   }
