@@ -1,7 +1,18 @@
 def main():
-	def push (ref list[int] stack, int x)
-		x := 1
+	decl alexia()
+	def push (ref list[int] stack):
+		%stack := x # nil
+		%x := 1
+		alexia()
+	end
+	def alexia ():
+		list[int] s
+		s := nil
+		push(s)
 	end
 	list[int] s
 	s := nil
+	%push(s, 1)
+  %push(s, 2)
+  %puti(head(s))  % this should print 2
 end

@@ -16,16 +16,16 @@ def checktypes ():
     return a
   end
   def lparam (ref list[char] l1; list[char] l2):
-    %l2 := 'j' # 'd' # l2
     char x
     list[char] l
-    %x := head(l2)
-    %l := tail(l2)
-    %x := head(tail(l2))
-    %x := head(l)
+    l2 := 'j' # 'd' # l2
+    x := head(l2)
+    l := tail(l2)
+    x := head(tail(l2))
+    x := head(l)
     %l1 := 'f' # nil
     puti(1)
-    %l1 := 'a' # l1
+    l1 := 'a' # l1
     x := head(l1)
     l := tail(l1)
     x := head(tail(l1))
