@@ -1263,9 +1263,6 @@ Type Formal::getType() {
 pair<Type, int> Formal::getSize() {
 	return make_pair(type, idl->size());
 }
-bool Formal::getTypeOfCall() {
-	return call_by_reference;
-}
 vector<const char*>* Formal::getIds() {
 	return idl;
 }
@@ -1373,10 +1370,11 @@ void Header::sem(bool func) {
 }
 
 llvm::Type* Header::convertType(Type type, bool params) const {
+	// cout << type << endl;
 	if (type.p == TYPE_int) return i32;
 	else if (type.p == TYPE_bool) return i1;
 	else if (type.p == TYPE_char) return i8;
-	else if (type.p == TYPE_nil) return llvm::Type::getVoidTy(TheContext);
+	else if (type.p == TYPE_void) return llvm::Type::getVoidTy(TheContext);
 	else if (type.c->getId() == "list" && !params)
 	 return llvm::StructType::get(TheContext, {llvm::PointerType::getUnqual(convertType(type.c->getType())), i32});
 	return llvm::PointerType::getUnqual(convertType(type.c->getType()));
@@ -1409,6 +1407,7 @@ llvm::Value* Header::compile() const {
 		main = true;
 	}
 	llvm::Type *func_type = convertType(type, false);
+	// cout << "header ---> " << func_name << endl;
 	// adding parameters' type in Function Type
 	vector<llvm::Type*> params = {};
 	// Set names for all arguments.
@@ -1416,25 +1415,29 @@ llvm::Value* Header::compile() const {
 	map<string, llvm::Value*> refs = {};
 	bool isList = false;
 	vector<string> listVars = {};
+	// cout << "header --->2 " << func_name << endl;
+
 	if (fl)
 		for(Formal *f: *fl) {
-			pair<Type, int> pair_type = f->getSize();
-			if(pair_type.first.p != TYPE_char &&
-				 pair_type.first.p != TYPE_int &&
-				 pair_type.first.p != TYPE_bool &&
-				 pair_type.first.c->getId() == "list") isList = true;
-			llvm::Type *llvm_pair_type = convertType(pair_type.first);
-			if (f->getTypeOfCall()) llvm_pair_type = llvm::PointerType::getUnqual(llvm_pair_type);
-			for (int j = 0; j < pair_type.second; j++){
-				params.push_back(llvm_pair_type);
+			bool call_by_reference = f->getCb();
+			Type formal_type = f->getType();
+			if(formal_type.p != TYPE_char &&
+				 formal_type.p != TYPE_int &&
+				 formal_type.p != TYPE_bool &&
+				 formal_type.c->getId() == "list") isList = true;
+			llvm::Type *llvm_type = convertType(formal_type);
+			if (call_by_reference) llvm_type = llvm::PointerType::getUnqual(llvm_type);
+			int fsize = f->getCountofIds();
+			for (int j = 0; j < fsize; j++){
+				params.push_back(llvm_type);
 				if (isList){
 					// if param is list add the size of the list to the params
-					if (f->getTypeOfCall()) params.push_back(llvm::PointerType::getUnqual(i32));
+					if (call_by_reference) params.push_back(llvm::PointerType::getUnqual(i32));
 					else params.push_back(i32);
 				}
 			}
 			// params.insert(params.end(), pair_type.second, llvm_pair_type);
-			bool call_by_reference = f->getTypeOfCall();
+			// bool call_by_reference = f->getCb();
 			vector<const char*>* idl = f->getIds();
 			for(const char* i: *idl) {
 				string name = string(i);
@@ -1542,6 +1545,7 @@ llvm::Value* FuncDef::compile() const {
 	// if function has been declared how and where??
 	// llvm::Function *TheFunction = TheModule->getFunction(func_name);
 	// // if the function has not be declared do it!
+	// cout << "before head" << endl;
 	hd->compile();
 	// cout << "after head" << endl;
 	ValueEntry *e = vt.lookup(func_name);

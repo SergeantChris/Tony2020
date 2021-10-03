@@ -1,0 +1,33 @@
+def checktypes ():
+  %def list[char] checkl (char a):
+  %  return a # nil
+  %end
+  def int[] checki ():
+    int[] a
+    a := new int[5]
+    a[1] := 56
+    return a
+  end
+  def int[][] check2d ():
+    int[][] a
+    a := new int[][5]
+    a[1] := new int[5]
+    a[1][1] := 56
+    return a
+  end
+  def lparam (ref list[char] l1; list[char] l2):
+    %l2 := 'f' # nil
+    % when we have both it works but without the above instruction the below one is not working
+    l2 := 'j' # l2
+  end
+  list[char] l
+  int[] a
+  int[][] b
+  %b := new int[][5]
+  %a := new int[5]
+  %b[1] := new int[5]
+  %l := checkl('a')
+  %a := checki()
+  %b := check2d()
+  lparam(l, l)
+end

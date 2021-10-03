@@ -371,7 +371,6 @@ public:
 	bool getCb();
 	virtual llvm::Value* compile() const override;
 	int getCountofIds();
-	bool getTypeOfCall();
 
 private:
 	Type type;

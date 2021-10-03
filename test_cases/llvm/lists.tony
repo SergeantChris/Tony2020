@@ -1,32 +1,4 @@
 def main ():
 	int n
-	def bool prime? (int n):
-    int i
-		puti(n)
-    if n < 0:
-      return prime?(-n)
-    elsif n < 2:
-      return false
-    elsif n = 2:
-      return true
-    elsif n mod 2 = 0: return false
-    else:
-      for i := 3; i <= n / 2; i := i + 2:
-				puti(i)
-        if n mod i = 0: return false end
-      end
-      return true
-    end
-    return true
-  end
-
-  int limit, number, counter
-	bool c
-  counter := 10
-	c := prime?(counter)
-	%geti()
-	putb(prime?(counter))
-	%puts("/n")
-	%strlen("Ciao")
-	c := prime?(9)
+	n:=0
 end
