@@ -2,7 +2,7 @@ def main ():
   int ni
 	def prime (int j,a):
     int pr
-		pr := 1
+		pr := j
   end
   def alexia (ref int j):
     int pr, a

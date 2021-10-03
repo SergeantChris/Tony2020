@@ -1,4 +1,0 @@
-def main ():
-	int n
-	n:=0
-end

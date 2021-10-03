@@ -1,0 +1,7 @@
+def main():
+	def push (ref list[int] stack, int x)
+		x := 1
+	end
+	list[int] s
+	s := nil
+end

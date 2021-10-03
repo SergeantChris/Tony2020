@@ -1,12 +1,12 @@
 def simple ():
   def bool prime? (int n; ref int l):
-    puti(n)
+    %puti(n)
     n := n+2
-    puti(n)
+    %puti(n)
     n := l + n
-    puti(n)
+    %puti(n)
     l := n
-    puti(l)
+    %puti(l)
     return true
   end
 
