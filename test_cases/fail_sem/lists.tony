@@ -6,7 +6,7 @@ def main ():
   def list[int] qsort (list[int] l, k; int a):
 		char c
 		int seed, i
-    list[int] l
+    %list[int] l
 		bool kati
 		bool katiallo
 		b := true
@@ -15,6 +15,10 @@ def main ():
 		c := 'c'
 		if not not kati = katiallo:
 			kati := not kati
+		elsif c = kati:
+			skip
+		else:
+			skip
 		end
     for i := 0, l := nil; i < 16; i := i+1:
       seed := (seed * 137 + 220 + i) mod 101

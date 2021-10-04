@@ -1,6 +1,8 @@
 def main():
-	decl myfunc(int a, b; bool c)
-	decl myfunc(int a, b; bool c)
+	decl myfunc(int a, b;
+	 			bool c)
+	decl myfunc(int a, b; 
+				bool c)
 	def dummy():
 		myfunc(3, 8, true)
 	end
