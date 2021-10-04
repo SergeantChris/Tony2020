@@ -109,6 +109,7 @@ int opt_flag=0, lco_flag=0, ico_flag=0;
 %type<exprl> expr_list
 %type<atom> atom
 
+%locations
 
 %%
 
@@ -128,7 +129,6 @@ program:
 		$1->llvm_compile_and_dump(opt_flag);
 		delete $1;
 		vt.closeScope();
-		//return 0;
 	}
 ;
 
@@ -144,8 +144,8 @@ func_list:
 ;
 
 header:
-  type T_id	'(' maybe_formal ')'	{ $$ = new Header($2, $4, $1); }
-| T_id '(' maybe_formal ')'				{ Type t; t.p = TYPE_void; $$ = new Header($1, $3, t); }
+  type T_id	'(' maybe_formal ')'	{ $$ = new Header(@$.last_line, $2, $4, $1); }
+| T_id '(' maybe_formal ')'				{ Type t; t.p = TYPE_void; $$ = new Header(@$.last_line, $1, $3, t); }
 ;
 
 maybe_formal:
@@ -160,8 +160,8 @@ formal_list:
 ;
 
 formal:
-	"ref" type id_list { $$ = new Formal($2, $3, "ref"); }
-| type id_list       { $$ = new Formal($1, $2, "val"); }
+	"ref" type id_list { $$ = new Formal(@$.last_line, $2, $3, "ref"); }
+| type id_list       { $$ = new Formal(@$.last_line, $1, $2, "val"); }
 ;
 
 id_list:
@@ -182,7 +182,7 @@ func_decl:
 ;
 
 var_def:
-  type id_list { $$ = new VarDef($1, $2); }
+  type id_list { $$ = new VarDef(@$.last_line, $1, $2); }
 ;
 
 stmt_list:
@@ -192,31 +192,31 @@ stmt_list:
 
 stmt:
   simple				{ $$ = $1; }
-| "exit"				{ $$ = new Return(); }
-| "return" expr	{ $$ = new Return($2); }
+| "exit"				{ $$ = new Return(@$.last_line); }
+| "return" expr	{ $$ = new Return(@$.last_line, $2); }
 | if_statement	{ $$ = $1; }
 | for_statement	{ $$ = $1; }
 ;
 
 if_statement:
 	"if" expr	':' stmt_list	elsif_statement else_statement "end"
-		{ $$ = new Branch($4, $2, $5, $6);}
+		{ $$ = new Branch(@$.first_line, $4, $2, $5, $6);}
 ;
 
 elsif_statement:
 	/* nothing */		{ $$ = new vector<Branch*>; }
 | elsif_statement "elsif" expr ':' stmt_list
-		{ $1->push_back(new Branch($5, $3)); $$ = $1; }
+		{ $1->push_back(new Branch(@2.last_line, $5, $3)); $$ = $1; }
 ;
 
 else_statement:
-	"else" ':' stmt_list	{ $$ = new Branch($3); }
+	"else" ':' stmt_list	{ $$ = new Branch(@$.first_line, $3); }
 | /* nothing */					{ $$ = nullptr; }
 ;
 
 for_statement:
 	"for" simple_list ';' expr ';' simple_list ':' stmt_list "end" {
-		$$ = new Loop($2, $4, $6, $8);
+		$$ = new Loop(@$.first_line, $2, $4, $6, $8);
 	}
 ;
 
@@ -228,13 +228,13 @@ simple_list:
 
 simple:
 	"skip"					{ $$ = new NoAction();}
-| atom ":=" expr	{ $$ = new Assign($1, $3); }
+| atom ":=" expr	{ $$ = new Assign(@$.last_line, $1, $3); }
 | call						{ $$ = $1; }
 ;
 
 call:
-	T_id '(' expr_list ')'	{$$ = new Call($1, $3); }
-| T_id '(' ')'						{$$ = new Call($1); }
+	T_id '(' expr_list ')'	{$$ = new Call(@$.last_line, $1, $3); }
+| T_id '(' ')'						{$$ = new Call(@$.last_line, $1); }
 ;
 
 expr_list:
@@ -244,9 +244,9 @@ expr_list:
 ;
 
 atom:
-	T_id								{ $$ = new Id($1); }
+	T_id								{ $$ = new Id(@$.last_line, $1); }
 | T_string						{ $$ = new String($1); }
-| atom '[' expr ']'		{ $$ = new DirectAcc($1, $3); }
+| atom '[' expr ']'		{ $$ = new DirectAcc(@$.last_line, $1, $3); }
 | call								{ $$ = new ReturnValue($1); }
 ;
 
@@ -255,30 +255,30 @@ expr:
 | T_constInt											{ $$ = new Const($1); }
 | T_constChar											{ $$ = new Const($1); }
 | '(' expr ')'										{ $$ = $2; }
-| '+' expr %prec PLUS_SIGN				{ $$ = new PreOp("+", $2); }
-| '-' expr %prec MINUS_SIGN				{ $$ = new PreOp("-", $2); }
-| expr '+' expr										{ $$ = new Op($1, "+", $3); }
-| expr '-' expr										{ $$ = new Op($1, "-", $3); }
-| expr '*' expr										{ $$ = new Op($1, "*", $3); }
-| expr '/' expr										{ $$ = new Op($1, "/", $3); }
-| expr "mod" expr									{ $$ = new Op($1, "mod", $3); }
-| expr '=' expr										{ $$ = new Op($1, "=", $3); }
-| expr "<>" expr									{ $$ = new Op($1, "<>", $3); }
-| expr '<' expr										{ $$ = new Op($1, "<", $3); }
-| expr '>' expr 									{ $$ = new Op($1, ">", $3); }
-| expr "<=" expr									{ $$ = new Op($1, "<=", $3); }
-| expr ">=" expr									{ $$ = new Op($1, ">=", $3); }
-| "not" expr											{ $$ = new PreOp("not", $2); }
-| expr "and" expr									{ $$ = new Op($1, "and", $3); }
-| expr "or" expr									{ $$ = new Op($1, "or", $3); }
+| '+' expr %prec PLUS_SIGN				{ $$ = new PreOp(@$.last_line, "+", $2); }
+| '-' expr %prec MINUS_SIGN				{ $$ = new PreOp(@$.last_line, "-", $2); }
+| expr '+' expr										{ $$ = new Op(@$.last_line, $1, "+", $3); }
+| expr '-' expr										{ $$ = new Op(@$.last_line, $1, "-", $3); }
+| expr '*' expr										{ $$ = new Op(@$.last_line, $1, "*", $3); }
+| expr '/' expr										{ $$ = new Op(@$.last_line, $1, "/", $3); }
+| expr "mod" expr									{ $$ = new Op(@$.last_line, $1, "mod", $3); }
+| expr '=' expr										{ $$ = new Op(@$.last_line, $1, "=", $3); }
+| expr "<>" expr									{ $$ = new Op(@$.last_line, $1, "<>", $3); }
+| expr '<' expr										{ $$ = new Op(@$.last_line, $1, "<", $3); }
+| expr '>' expr 									{ $$ = new Op(@$.last_line, $1, ">", $3); }
+| expr "<=" expr									{ $$ = new Op(@$.last_line, $1, "<=", $3); }
+| expr ">=" expr									{ $$ = new Op(@$.last_line, $1, ">=", $3); }
+| "not" expr											{ $$ = new PreOp(@$.last_line, "not", $2); }
+| expr "and" expr									{ $$ = new Op(@$.last_line, $1, "and", $3); }
+| expr "or" expr									{ $$ = new Op(@$.last_line, $1, "or", $3); }
 | "true"													{ $$ = new Const(string("true")); }
 | "false"													{ $$ = new Const(string("false")); }
-| "new" type '[' expr ']'					{ $$ = new MemoryAlloc($2, $4); }
+| "new" type '[' expr ']'					{ $$ = new MemoryAlloc(@$.last_line, $2, $4); }
 | "nil"														{ $$ = new Const(string("nil")); }
-| "nil?" '(' expr ')'							{ $$ = new PreOp("nil?", $3); }
-| expr '#' expr										{ $$ = new Op($1, "#", $3); }
-| "head" '(' expr ')'							{ $$ = new PreOp("head", $3); }
-| "tail" '(' expr ')'							{ $$ = new PreOp("tail", $3); }
+| "nil?" '(' expr ')'							{ $$ = new PreOp(@$.last_line, "nil?", $3); }
+| expr '#' expr										{ $$ = new Op(@$.last_line, $1, "#", $3); }
+| "head" '(' expr ')'							{ $$ = new PreOp(@$.last_line, "head", $3); }
+| "tail" '(' expr ')'							{ $$ = new PreOp(@$.last_line, "tail", $3); }
 ;
 
 %%
@@ -310,7 +310,7 @@ int main(int argc, char* argv[]) {
     return -1;
   }
   yyin = f;
-  int result = yyparse();
+  yyparse();
   cout << "Success." << endl;
-  return result;
+  return 0;
 }

@@ -30,9 +30,8 @@ using namespace std;
 #define BOLD(x) "\x1B[1m" x RST
 #define UNDL(x) "\x1B[4m" x RST
 
-extern int linecount;
 
-void error(const string formatted);
+void error(const string formatted, int line_no);
 
 
 #endif

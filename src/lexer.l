@@ -1,5 +1,6 @@
 %option noyywrap
 %option nounput
+%option yylineno
 
 %{
 #include <cstdio>
@@ -16,7 +17,7 @@ using namespace std;
 extern int linecount;
 int comment_nesting = 0;
 
-
+#define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno;
 %}
 
 digit	[0-9]
@@ -99,9 +100,9 @@ ESC \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 
 .									{ ostringstream formatted;
 									  formatted << "Lexical Error: unexpected token: " << yytext;
-									  error(formatted.str()); }
+									  error(formatted.str(), linecount); }
 %%
 
 void yyerror(const char *msg) {
-	error(msg);
+	error(msg, linecount);
 }

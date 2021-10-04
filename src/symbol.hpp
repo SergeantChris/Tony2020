@@ -32,7 +32,7 @@ class Scope {
 public:
   Scope(int ofs = -1);
   SymbolEntry* lookup(string c, string def);
-  void insert(string c, Type t, string def, vector<Formal*>* v);
+  void insert(int line_no, string c, Type t, string def, vector<Formal*>* v);
   int getSize() const;
   int getOffset() const;
 	Type getLastFuncType() const;
@@ -48,8 +48,8 @@ class SymbolTable {
 public:
   void openScope();
   void closeScope();
-  SymbolEntry* lookup(string c, string def = "var");
-  void insert(string c, Type t, string def = "var", vector<Formal*>* v = nullptr, bool built_in = false);
+  SymbolEntry* lookup(int line_no, string c, string def = "var");
+  void insert(int line_no, string c, Type t, string def = "var", vector<Formal*>* v = nullptr, bool built_in = false);
   int getSizeOfCurrentScope() const;
 	Type getReturnType() const;
 	bool EmptyScopes() const;

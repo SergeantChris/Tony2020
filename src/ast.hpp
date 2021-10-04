@@ -115,10 +115,10 @@ ostream& operator<<(ostream &out, const ASTnode &n);
 class Expr: public ASTnode { //abstract class
 public:
 	virtual ~Expr();
-	void typeCheck(Type t);
-	void typeCheck(PrimitiveType p);
-	void typeCheck(CompositeType* c);
-	void typeCheck(CompositeType* c1, CompositeType* c2);
+	void typeCheck(Type t, int line_no);
+	void typeCheck(PrimitiveType p, int line_no);
+	void typeCheck(CompositeType* c, int line_no);
+	void typeCheck(CompositeType* c1, CompositeType* c2, int line_no);
 	Type getType();
 
 	virtual llvm::Value* compile_check_call(bool call = false, string func_name = "", int index = 0) const {return nullptr;}
@@ -155,7 +155,7 @@ private:
 
 class PreOp: public Expr {
 public:
-	PreOp(const char* o, Expr* e);
+	PreOp(int l, const char* o, Expr* e);
 	~PreOp();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -166,11 +166,12 @@ public:
 private:
 	string op;
 	Expr* expr;
+	int line_no;
 };
 
 class Op: public Expr {
 public:
-	Op(Expr* e1, const char* o, Expr* e2);
+	Op(int l, Expr* e1, const char* o, Expr* e2);
 	~Op();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -182,11 +183,12 @@ private:
 	string op;
 	Expr* expr1;
 	Expr* expr2;
+	int line_no;
 };
 
 class MemoryAlloc: public Expr {
 public:
-	MemoryAlloc(Type t, Expr* e);
+	MemoryAlloc(int l, Type t, Expr* e);
 	~MemoryAlloc();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -198,6 +200,7 @@ public:
 private:
 	Type new_type;
 	Expr* expr;
+	int line_no;
 };
 
 class Atom: virtual public Expr { //abstract class
@@ -208,7 +211,7 @@ public:
 
 class Id: public Atom {
 public:
-	Id(const char* i);
+	Id(int l, const char* i);
 	~Id();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -220,6 +223,7 @@ public:
 
 private:
 	const char* id;
+	int line_no;
 };
 
 class String: public Atom, public Const {
@@ -232,7 +236,7 @@ public:
 
 class DirectAcc: public Atom {
 public:
-	DirectAcc(Atom* a, Expr* e);
+	DirectAcc(int l, Atom* a, Expr* e);
 	~DirectAcc();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -245,6 +249,7 @@ public:
 private:
 	Atom* atom;
 	Expr* expr;
+	int line_no;
 };
 
 class Stmt: public ASTnode { //abstract class
@@ -268,7 +273,7 @@ public:
 
 class Assign: public Simple {
 public:
-	Assign(Atom* a, Expr* e);
+	Assign(int l, Atom* a, Expr* e);
 	~Assign();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -277,11 +282,12 @@ public:
 private:
 	Atom* atom;
 	Expr* expr;
+	int line_no;
 };
 
 class Call: public Simple {
 public:
-	Call(const char* i, vector<shared_ptr<Expr>>* e = nullptr);
+	Call(int l, const char* i, vector<shared_ptr<Expr>>* e = nullptr);
 	~Call();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -292,6 +298,7 @@ private:
 	const char* id;
 	vector<shared_ptr<Expr>>* exprList;
 	Type type;
+	int line_no;
 };
 
 class ReturnValue: public Atom {
@@ -311,7 +318,7 @@ private:
 
 class Return: public Stmt {
 public:
-	Return(Expr* v = nullptr);
+	Return(int l, Expr* v = nullptr);
 	~Return();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -319,11 +326,13 @@ public:
 
 private:
 	Expr* ret_val;
+	int line_no;
 };
 
 class Branch: public Stmt {
 public:
-	Branch(vector<shared_ptr<Stmt>>* ct,
+	Branch(int l, 
+		vector<shared_ptr<Stmt>>* ct,
 		Expr* c = new Const("true"),
 		vector<Branch*>* eif = nullptr,
 		Branch* e = nullptr);
@@ -338,11 +347,13 @@ private:
 	Expr* condition;
 	vector<Branch*>* elsif_branches;
 	Branch* else_branch;
+	int line_no;
 };
 
 class Loop: public Stmt {
 public:
-	Loop(vector<shared_ptr<Simple>>* i,
+	Loop(int l,
+		vector<shared_ptr<Simple>>* i,
 		Expr* c,
 		vector<shared_ptr<Simple>>* s,
 		vector<shared_ptr<Stmt>>* ct);
@@ -356,11 +367,12 @@ private:
 	Expr* condition;
 	vector<shared_ptr<Simple>>* steps;
 	vector<shared_ptr<Stmt>>* cond_true;
+	int line_no;
 };
 
 class Formal: public ASTnode {
 public:
-	Formal(Type t, vector<const char*>* i, string cb);
+	Formal(int l, Type t, vector<const char*>* i, string cb);
 	~Formal();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -376,11 +388,12 @@ private:
 	Type type;
 	vector<const char*>* idl;
 	bool call_by_reference;
+	int line_no;
 };
 
 class Header: public ASTnode {
 public:
-	Header(const char* i, vector<Formal*>* f, Type t);
+	Header(int l, const char* i, vector<Formal*>* f, Type t);
 	~Header();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem(bool func = true);
@@ -395,6 +408,7 @@ private:
 	const char* id;
 	vector<Formal*>* fl;
 	Type type;
+	int line_no;
 };
 
 class Def: public ASTnode { //abstract class
@@ -432,7 +446,7 @@ private:
 
 class VarDef: public Def {
 public:
-	VarDef(Type t, vector<const char*>* i);
+	VarDef(int l, Type t, vector<const char*>* i);
 	~VarDef();
 	virtual void printNode(ostream &out) const override;
 	virtual void sem() override;
@@ -442,6 +456,7 @@ public:
 private:
 	Type type;
 	vector<const char*>* idl;
+	int line_no;
 };
 
 class Library {

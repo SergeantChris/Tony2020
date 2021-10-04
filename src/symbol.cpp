@@ -34,16 +34,16 @@ SymbolEntry* Scope::lookup(string c, string def) {
     return &funcs[c];
 	}
 }
-void Scope::insert(string c, Type t, string def, vector<Formal*>* v) {
+void Scope::insert(int line_no, string c, Type t, string def, vector<Formal*>* v) {
 	ostringstream formatted;
 	if (def == "var"){
 		if (locals.find(c) != locals.end()) {
 			formatted << "Duplicate variable: " << c;
-			error(formatted.str());
+			error(formatted.str(), line_no);
 		}
 		if (funcs.find(c) != funcs.end()) {
 			formatted << "Duplicate id (this name is already used by a function): " << c;
-			error(formatted.str());
+			error(formatted.str(), line_no);
 		}
 		#if PRE_DEBUG
 			cout << "Inserting Var: " << c << " into locals" << endl;
@@ -55,12 +55,12 @@ void Scope::insert(string c, Type t, string def, vector<Formal*>* v) {
 		if (funcs.find(c) != funcs.end()) {
 			if(!(def == "func_def") || !(funcs[c].from == "func_decl")) {
 				formatted << "Duplicate function name: " << c;
-				error(formatted.str());
+				error(formatted.str(), line_no);
 			}
 		}
 		if (locals.find(c) != locals.end()) {
 			formatted << "Duplicate id (this name is already used by a variable): " << c;
-			error(formatted.str());
+			error(formatted.str(), line_no);
 		}
 		#if PRE_DEBUG
 			cout << "Inserting Fun: " << c << " into funcs" << endl;
@@ -84,7 +84,7 @@ void SymbolTable::openScope() {
 void SymbolTable::closeScope() {
   scopes.pop_back();
 }
-SymbolEntry* SymbolTable::lookup(string c, string def) {
+SymbolEntry* SymbolTable::lookup(int line_no, string c, string def) {
   for (auto i = scopes.rbegin(); i != scopes.rend(); ++i) {
 		#if PRE_DEBUG
 			cout << "scope with size: " << i->getSize() << " and offset: " << i->getOffset() << endl;
@@ -95,21 +95,21 @@ SymbolEntry* SymbolTable::lookup(string c, string def) {
   if (def != "func_decl") {
   	ostringstream formatted;
   	formatted << "Entry " << c << " not found";
-  	error(formatted.str());
+  	error(formatted.str(), line_no);
   }
   return nullptr;
 }
-void SymbolTable::insert(string c, Type t, string def, vector<Formal*>* v, bool built_in) {
+void SymbolTable::insert(int line_no, string c, Type t, string def, vector<Formal*>* v, bool built_in) {
 	if(def!="var" && !built_in && scopes.size()==1) {
 		Type main_type;
 		main_type.p = TYPE_void;
 		if(!(t == main_type) || v!=nullptr) {
 			ostringstream formatted;
 			formatted << "Program's main function " << c << " must take no arguments and return no value";
-			error(formatted.str());
+			error(formatted.str(), line_no);
 		}
 	}
-  scopes.back().insert(c, t, def, v);
+  scopes.back().insert(line_no, c, t, def, v);
 }
 int SymbolTable::getSizeOfCurrentScope() const {
   return scopes.back().getSize();

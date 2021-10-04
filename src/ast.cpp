@@ -255,7 +255,7 @@ ostream& operator<<(ostream &out, const ASTnode &n) {
 
 
 Expr::~Expr() {}
-void Expr::typeCheck(Type t) {
+void Expr::typeCheck(Type t, int line_no) {
 	#if PRE_DEBUG
 	cout << "-- TYPE CHECK  ("<< type << ", " << t << ")";
 	#endif
@@ -263,7 +263,7 @@ void Expr::typeCheck(Type t) {
 		cout << endl;
 		ostringstream formatted;
 		formatted << "Type mismatch, expected type: " << t << ", but type: " << type << " was used";
-		error(formatted.str());
+		error(formatted.str(), line_no);
 	}
 	#if PRE_DEBUG
 	else {
@@ -271,17 +271,17 @@ void Expr::typeCheck(Type t) {
 	}
 	#endif
 }
-void Expr::typeCheck(PrimitiveType p) { // overloading
+void Expr::typeCheck(PrimitiveType p, int line_no) { // overloading
 	Type t;
 	t.p = p;
-	typeCheck(t);
+	typeCheck(t, line_no);
 }
-void Expr::typeCheck(CompositeType* c) { // overloading
+void Expr::typeCheck(CompositeType* c, int line_no) { // overloading
 	Type t;
 	t.c = c;
-	typeCheck(t);
+	typeCheck(t, line_no);
 }
-void Expr::typeCheck(CompositeType* c1, CompositeType* c2) { // overloading for union
+void Expr::typeCheck(CompositeType* c1, CompositeType* c2, int line_no) { // overloading for union
 	Type t1;
 	t1.c = c1;
 	Type t2;
@@ -292,7 +292,7 @@ void Expr::typeCheck(CompositeType* c1, CompositeType* c2) { // overloading for 
 	if(!(type == t1) && !(type == t2)){
 		ostringstream formatted;
 		formatted << "Type mismatch, expected " << c1->getId() << " or " << c2->getId() << " kind of type, but " << type << " was used";
-		error(formatted.str());
+		error(formatted.str(), line_no);
 	}
 	#if PRE_DEBUG
 	else {
@@ -362,7 +362,7 @@ llvm::Value* Const::compile_check_call(bool call, string func_name, int index) c
 }
 
 
-PreOp::PreOp(const char* o, Expr* e): op(o), expr(e) {}
+PreOp::PreOp(int l, const char* o, Expr* e): op(o), expr(e), line_no(l) {}
 PreOp::~PreOp() { delete expr; }
 void PreOp::printNode(ostream &out) const {
 	out << "PreOp(" << op << ", " << *expr << ")";
@@ -370,23 +370,23 @@ void PreOp::printNode(ostream &out) const {
 void PreOp::sem() {
 	expr->sem();
 	if(op == "+" || op == "-") {
-		expr->typeCheck(TYPE_int);
+		expr->typeCheck(TYPE_int, line_no);
 		type.p = TYPE_int;
 	}
 	else if(op == "not") {
-		expr->typeCheck(TYPE_bool);
+		expr->typeCheck(TYPE_bool, line_no);
 		type.p = TYPE_bool;
 	}
 	else if(op == "nil?") {
-		expr->typeCheck(new List(TYPE_nil));
+		expr->typeCheck(new List(TYPE_nil), line_no);
 		type.p = TYPE_bool;
 	}
 	else if(op == "head") {
-		expr->typeCheck(new List(TYPE_nil));
+		expr->typeCheck(new List(TYPE_nil), line_no);
 		type = ((expr->getType()).c)->getType();
 	}
 	else if(op == "tail") {
-		expr->typeCheck(new List(TYPE_nil));
+		expr->typeCheck(new List(TYPE_nil), line_no);
 		type = expr->getType();
 	}
 }
@@ -455,7 +455,7 @@ const char* PreOp::getId()  {
 	return "_ithasnoid";
 }
 
-Op::Op(Expr* e1, const char* o, Expr* e2): op(o), expr1(e1), expr2(e2) {}
+Op::Op(int l, Expr* e1, const char* o, Expr* e2): op(o), expr1(e1), expr2(e2), line_no(l) {}
 Op::~Op() { delete expr1; delete expr2; }
 void Op::printNode(ostream &out) const {
 	out << "Op(" << *expr1 << ", " << op << ", " << *expr2 << ")";
@@ -464,27 +464,27 @@ void Op::sem() {
 	expr1->sem();
 	expr2->sem();
 	if(op == "and" || op == "or") {
-		expr1->typeCheck(TYPE_bool);
-		expr2->typeCheck(TYPE_bool);
+		expr1->typeCheck(TYPE_bool, line_no);
+		expr2->typeCheck(TYPE_bool, line_no);
 		type.p = TYPE_bool;
 	}
 	else if(op == "#") { // expr1->t, expr2->list[t]
-		expr2->typeCheck(new List(expr1->getType()));
+		expr2->typeCheck(new List(expr1->getType()), line_no);
 		type.c = new List(expr1->getType()); // because expr2->getType might still be null list
 	}
 	else if(op == "=" || op == "<>" || op == "<" || op == ">" || op == "<=" || op == ">=") {
 		Type type_1 = expr1->getType();
-		expr2->typeCheck(type_1);
+		expr2->typeCheck(type_1, line_no);
 		if(!isPrimitive(type_1)) {
 			ostringstream formatted;
 			formatted << "Can only compare primitive type operands, type is " << type_1;
-			error(formatted.str());
+			error(formatted.str(), line_no);
 		}
 		type.p = TYPE_bool;
 	}
 	else if(op == "+" || op == "-" || op == "*" || op == "/" || op == "mod") {
-		expr1->typeCheck(TYPE_int);
-		expr2->typeCheck(TYPE_int);
+		expr1->typeCheck(TYPE_int, line_no);
+		expr2->typeCheck(TYPE_int, line_no);
 		type.p = TYPE_int;
 	}
 }
@@ -573,14 +573,14 @@ const char* Op::getId() {
 }
 
 
-MemoryAlloc::MemoryAlloc(Type t, Expr* e): new_type(t), expr(e) {}
+MemoryAlloc::MemoryAlloc(int l, Type t, Expr* e): new_type(t), expr(e), line_no(l) {}
 MemoryAlloc::~MemoryAlloc() { delete expr; }
 void MemoryAlloc::printNode(ostream &out) const {
 	out << "MemoryAlloc(" << type << ", " << *expr << ")";
 }
 void MemoryAlloc::sem() {
 	expr->sem();
-	expr->typeCheck(TYPE_int);
+	expr->typeCheck(TYPE_int, line_no);
 
 	Type final_type;
 	final_type.c = new Array(new_type);
@@ -626,7 +626,7 @@ llvm::Type* MemoryAlloc::defineArrayType(Type t) const{
 Atom::~Atom() {}
 
 
-Id::Id(const char* i): id(i) {}
+Id::Id(int l, const char* i): id(i), line_no(l) {}
 Id::~Id() { delete id; }
 void Id::printNode(ostream &out) const {
 	out << "Id(" << id << ")";
@@ -638,7 +638,7 @@ void Id::sem() {
 	#if PRE_DEBUG
 	cout << "Searching for: " << id << " ... ";
 	#endif
-	SymbolEntry *e = st.lookup(string(id));
+	SymbolEntry *e = st.lookup(line_no, string(id));
 	#if PRE_DEBUG
 	cout << "Found it with offset: " << e->offset << " and type: " << e->type << endl;
 	#endif
@@ -705,7 +705,7 @@ llvm::Value* String::compile_alloc() const {
 }
 
 
-DirectAcc::DirectAcc(Atom* a, Expr* e): atom(a), expr(e) {}
+DirectAcc::DirectAcc(int l, Atom* a, Expr* e): atom(a), expr(e), line_no(l) {}
 DirectAcc::~DirectAcc() { delete atom; delete expr; }
 void DirectAcc::printNode(ostream &out) const {
 	out << "DirectAcc(" << *atom << ", " << *expr << ")";
@@ -713,8 +713,8 @@ void DirectAcc::printNode(ostream &out) const {
 void DirectAcc::sem() {
 	expr->sem();
 	atom->sem();
-	atom->typeCheck(new Array(TYPE_nil), new List(TYPE_nil));
-	expr->typeCheck(TYPE_int);
+	atom->typeCheck(new Array(TYPE_nil), new List(TYPE_nil), line_no);
+	expr->typeCheck(TYPE_int, line_no);
 	type = ((atom->getType()).c)->getType();
 }
 bool DirectAcc::isLVal() const { //complicated one
@@ -723,7 +723,7 @@ bool DirectAcc::isLVal() const { //complicated one
 	not_mutable.c = new List(TYPE_nil);
 
 	if(dynamic_cast<Id*>(atom) != nullptr) {
-		SymbolEntry *e = st.lookup(dynamic_cast<Id*>(atom)->getId());
+		SymbolEntry *e = st.lookup(line_no, dynamic_cast<Id*>(atom)->getId());
 		Type id_type = e->type;
 		if(id_type == not_mutable) return false;
 		else return true;
@@ -784,7 +784,7 @@ llvm::Value* NoAction::compile() const {
 }
 
 
-Assign::Assign(Atom* a, Expr* e): atom(a), expr(e) {}
+Assign::Assign(int l, Atom* a, Expr* e): atom(a), expr(e), line_no(l) {}
 Assign::~Assign() { delete atom; delete expr; }
 void Assign::printNode(ostream &out) const {
 	out << "Assign(" << *atom << ", " << *expr << ")";
@@ -792,11 +792,11 @@ void Assign::printNode(ostream &out) const {
 void Assign::sem() {
 	expr->sem();
 	atom->sem();
-	expr->typeCheck(atom->getType());
+	expr->typeCheck(atom->getType(), line_no);
 	if(!atom->isLVal()) {
 		ostringstream formatted;
 		formatted << "Cannot assign to " << *atom << ", not an l-value";
-		error(formatted.str());
+		error(formatted.str(), line_no);
 	}
 }
 llvm::Value* Assign::compile() const {
@@ -927,7 +927,7 @@ llvm::Value* Assign::compile() const {
 }
 
 
-Call::Call(const char* i, vector<shared_ptr<Expr>>* e): id(i), exprList(e) {}
+Call::Call(int l, const char* i, vector<shared_ptr<Expr>>* e): id(i), exprList(e), line_no(l) {}
 Call::~Call() { delete id; delete exprList; }
 void Call::printNode(ostream &out) const {
 	out << "Call(" << id;
@@ -944,7 +944,7 @@ void Call::sem() {
 	#if PRE_DEBUG
 	cout << "Looking up for definition of the function ..." << endl;
 	#endif
-	SymbolEntry *func = st.lookup(string(id), "func_def");
+	SymbolEntry *func = st.lookup(line_no, string(id), "func_def");
 	vector<Formal*>* params = func->params;
 	type = func->type;
 
@@ -956,10 +956,10 @@ void Call::sem() {
 				int i = 0;
 				for(shared_ptr<Expr> e: *exprList) {
 					e->sem();
-					e->typeCheck(params->at(i)->getType());
+					e->typeCheck(params->at(i)->getType(), line_no);
 					if(params->at(i)->getCb() == true) {
 						if((dynamic_cast<Atom*>(e.get()) == nullptr) || !(dynamic_cast<Atom*>(e.get())->isLVal())) {
-							error("Actual parameter has to be l-value when passing by reference");
+							error("Actual parameter has to be l-value when passing by reference", line_no);
 						}
 					}
 					i++;
@@ -968,13 +968,13 @@ void Call::sem() {
 			else {
 				ostringstream formatted;
 				formatted << "Function takes " << params->size() << " arguments, but" << exprList->size() << " arguments were given";
-				error(formatted.str());
+				error(formatted.str(), line_no);
 			}
 		}
 		else {
 			ostringstream formatted;
 			formatted << "Function takes no arguments, but " << exprList->size() << " arguments were given";
-			error(formatted.str());
+			error(formatted.str(), line_no);
 		}
 	}
 }
@@ -1079,7 +1079,7 @@ llvm::Value* ReturnValue::compile_alloc() const {
 }
 
 
-Return::Return(Expr* v): ret_val(v) {}
+Return::Return(int l, Expr* v): ret_val(v), line_no(l) {}
 Return::~Return() { delete ret_val; }
 void Return::printNode(ostream &out) const {
 	out << "Return(";
@@ -1092,7 +1092,7 @@ void Return::sem() {
 		#if PRE_DEBUG
 		cout << "Checking return type ..." << endl;
 		#endif
-		ret_val->typeCheck(st.getReturnType());
+		ret_val->typeCheck(st.getReturnType(), line_no);
 	}
 	else {
 		#if PRE_DEBUG
@@ -1104,7 +1104,7 @@ void Return::sem() {
 		if(!(r_type == rv_type)) {
 			ostringstream formatted;
 			formatted << "Function of return type " << r_type << " must return a value";
-			error(formatted.str());
+			error(formatted.str(), line_no);
 		}
 	}
 }
@@ -1136,7 +1136,7 @@ llvm::Value* Return::compile() const {
 }
 
 
-Branch::Branch(vector<shared_ptr<Stmt>>* ct, Expr* c, vector<Branch*>* eif, Branch* e): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e) {}
+Branch::Branch(int l, vector<shared_ptr<Stmt>>* ct, Expr* c, vector<Branch*>* eif, Branch* e): cond_true(ct), condition(c), elsif_branches(eif), else_branch(e), line_no(l) {}
 Branch::~Branch() { delete cond_true; delete condition; del_entries(elsif_branches); delete elsif_branches; delete else_branch; }
 void Branch::printNode(ostream &out) const {
 	out << "Branch(";
@@ -1158,7 +1158,7 @@ void Branch::printNode(ostream &out) const {
 }
 void Branch::sem() {
 	condition->sem();
-	condition->typeCheck(TYPE_bool);
+	condition->typeCheck(TYPE_bool, line_no);
 	for(shared_ptr<Stmt> s: *cond_true) s->sem();
 	if(elsif_branches != nullptr) {
 		for(Branch* b: *elsif_branches) b->sem();
@@ -1231,7 +1231,7 @@ void Branch::setAfterBB(llvm::BasicBlock *AfterBB){
 }
 
 
-Loop::Loop(vector<shared_ptr<Simple>>* i,	Expr* c, vector<shared_ptr<Simple>>* s,	vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct) {}
+Loop::Loop(int l, vector<shared_ptr<Simple>>* i, Expr* c, vector<shared_ptr<Simple>>* s, vector<shared_ptr<Stmt>>* ct): inits(i), condition(c), steps(s), cond_true(ct), line_no(l) {}
 Loop::~Loop() { delete inits; delete condition; delete steps; delete cond_true; }
 void Loop::printNode(ostream &out) const {
 	out << "Loop(";
@@ -1254,7 +1254,7 @@ void Loop::printNode(ostream &out) const {
 }
 void Loop::sem() {
 	condition->sem();
-	condition->typeCheck(TYPE_bool);
+	condition->typeCheck(TYPE_bool, line_no);
 	for(shared_ptr<Simple> s: *inits) 	s->sem();
 	for(shared_ptr<Simple> s: *steps) 	s->sem();
 	for(shared_ptr<Stmt> s: *cond_true) s->sem();
@@ -1290,7 +1290,7 @@ llvm::Value* Loop::compile() const {
 }
 
 
-Formal::Formal(Type t, vector<const char*>* i, string cb): type(t), idl(i) {
+Formal::Formal(int l, Type t, vector<const char*>* i, string cb): type(t), idl(i), line_no(l) {
 	if(cb == "val") call_by_reference = false;
 	else if(cb == "ref") call_by_reference = true;
 }
@@ -1309,7 +1309,7 @@ void Formal::printNode(ostream &out) const {
 void Formal::sem() {
 	for(const char* i: *idl) {
 		// saves each var into the SymbolTable in the scope of the function
-		st.insert(string(i), type);
+		st.insert(line_no, string(i), type);
 	}
 }
 vector<Formal*>* Formal::getOpenedFormal() {
@@ -1318,7 +1318,7 @@ vector<Formal*>* Formal::getOpenedFormal() {
 	for(const char* id: *idl) {
 		vector<const char*>* idl_self = new vector<const char*>;
 		idl_self->push_back(id);
-		opened->push_back(new Formal(type, idl_self, ref));
+		opened->push_back(new Formal(line_no, type, idl_self, ref));
 	}
 	return opened;
 }
@@ -1354,7 +1354,7 @@ int Formal::getCountofIds() {
 }
 
 
-Header::Header(const char* i, vector< Formal*>* f, Type t): id(i), fl(f) {
+Header::Header(int l, const char* i, vector< Formal*>* f, Type t): id(i), fl(f), line_no(l) {
 	type = t;
 }
 Header::~Header() { delete id; del_entries(fl); delete fl; }
@@ -1374,7 +1374,7 @@ void Header::sem(bool func) {
 		#if PRE_DEBUG
 		cout << "Looking up for declaration of the function ... " << endl;
 		#endif
-		SymbolEntry *e = st.lookup(id, "func_decl");
+		SymbolEntry *e = st.lookup(line_no, id, "func_decl");
 		vector<Formal*>* params;
 		if(fl != nullptr) {
 			params = new vector<Formal*>;
@@ -1389,15 +1389,15 @@ void Header::sem(bool func) {
 		}
 		else params = nullptr;
 		if (e == nullptr) {
-			if(func) st.insert(string(id), type, "func_def", params);
-			else st.insert(string(id), type, "func_decl", params);
+			if(func) st.insert(line_no, string(id), type, "func_def", params);
+			else st.insert(line_no, string(id), type, "func_decl", params);
 		}
 		else {
 			string def = e->from;
-			if ((def == "func_def") && func) error("Duplicate function definition");
-			else if (!func) error("Duplicate function declaration");
+			if ((def == "func_def") && func) error("Duplicate function definition", line_no);
+			else if (!func) error("Duplicate function declaration", line_no);
 			else {
-				if (!(e->type == type)) error("Mismatch in function definition");
+				if (!(e->type == type)) error("Mismatch in function definition", line_no);
 				vector<Formal*>* decl_params = e->params;
 				if(decl_params != nullptr) {
 					int i=0;
@@ -1406,20 +1406,20 @@ void Header::sem(bool func) {
 						ostringstream formatted;
 						if(!(f_def->getType() == f_decl->getType())) {
 							formatted << "Mismatch in arg type at position " << i << " of function: " << id;
-							error(formatted.str());
+							error(formatted.str(), line_no);
 						}
 						if(strcmp(f_def->getIds()->at(0), f_decl->getIds()->at(0))) {
 							formatted << "Mismatch in arg id at position " << i << " of function: " << id;
-							error(formatted.str());
+							error(formatted.str(), line_no);
 						}
 						if(f_def->getCb() != f_decl->getCb()) {
 							formatted << "Mismatch in arg \'call by\' method at position " << i << " of function: " << id;
-							error(formatted.str());
+							error(formatted.str(), line_no);
 						}
 						i++;
 					} // checks if types, names, and callbys are the same as decl
 				}
-				st.insert(string(id), type, "func_def", params);
+				st.insert(line_no, string(id), type, "func_def", params);
 			}
 		}
 	}
@@ -1596,7 +1596,7 @@ void FuncDef::sem() {
 	#if PRE_DEBUG
 	cout << "--- Closing scope!" << endl;
 	#endif
-  st.closeScope();
+    st.closeScope();
 }
 llvm::Value* FuncDef::compile() const {
 	// First, check for an existing function from a previous 'extern' declaration.
@@ -1693,7 +1693,7 @@ llvm::Type* FuncDecl::convertType(Type type) const{
 }
 
 
-VarDef::VarDef(Type t, vector<const char*>* i): type(t), idl(i) {}
+VarDef::VarDef(int l, Type t, vector<const char*>* i): type(t), idl(i), line_no(l) {}
 VarDef::~VarDef() { delete idl; }
 void VarDef::printNode(ostream &out) const {
 	out << "VarDef(";
@@ -1708,7 +1708,7 @@ void VarDef::printNode(ostream &out) const {
 }
 void VarDef::sem() {
 	for(const char* i: *idl){
-		st.insert(string(i), type);
+		st.insert(line_no, string(i), type);
 	}
 }
 llvm::Value* VarDef::compile() const {
@@ -1780,11 +1780,11 @@ void Library::init() {
 	variable_type.p = TYPE_int;
 	return_type.p = TYPE_void;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("puti", return_type, "func_decl", params, built_in);
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
+	st.insert(0, "puti", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("n", variable_type);
+	st.insert(0, "n", variable_type);
 	st.closeScope();
 
 	// void putb(bool b)
@@ -1794,11 +1794,11 @@ void Library::init() {
 	variable_type.p = TYPE_bool;
 	return_type.p = TYPE_void;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("putb", return_type, "func_decl", params, built_in);
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
+	st.insert(0, "putb", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("b", variable_type);
+	st.insert(0, "b", variable_type);
 	st.closeScope();
 
 	// void putc(char c)
@@ -1808,11 +1808,11 @@ void Library::init() {
 	variable_type.p = TYPE_char;
 	return_type.p = TYPE_void;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("putc", return_type, "func_decl", params, built_in);
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
+	st.insert(0, "putc", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("c", variable_type);
+	st.insert(0, "c", variable_type);
 	st.closeScope();
 
 	// void puts(char[] s)
@@ -1822,30 +1822,30 @@ void Library::init() {
 	varh_t.p = TYPE_char; variable_type.c = new Array(varh_t);
 	return_type.p = TYPE_void;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
-	st.insert("puts", return_type, "func_decl", params, built_in);
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
+	st.insert(0, "puts", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("s", variable_type);
+	st.insert(0, "s", variable_type);
 	st.closeScope();
 
 	// int geti()
 	return_type.p = TYPE_int;
-	st.insert("geti", return_type, "func_decl", nullptr, built_in);
+	st.insert(0, "geti", return_type, "func_decl", nullptr, built_in);
 
 	st.openScope();
 	st.closeScope();
 
 	// bool getb()
 	return_type.p = TYPE_bool;
-	st.insert("getb", return_type, "func_decl", nullptr, built_in);
+	st.insert(0, "getb", return_type, "func_decl", nullptr, built_in);
 
 	st.openScope();
 	st.closeScope();
 
 	// char getc()
 	return_type.p = TYPE_char;
-	st.insert("getc", return_type, "func_decl", nullptr, built_in);
+	st.insert(0, "getc", return_type, "func_decl", nullptr, built_in);
 
 	st.openScope();
 	st.closeScope();
@@ -1856,23 +1856,23 @@ void Library::init() {
 	id_list->push_back("n");
 	variable_type.p = TYPE_int;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
 
 	id_list = new vector<const char*>;
 	id_list->push_back("s");
 	varh_t.p = TYPE_char; variable_type.c = new Array(varh_t);
 
-	params->push_back(new Formal(variable_type, id_list, "ref")); // TODO: not sure if ref is true
+	params->push_back(new Formal(0, variable_type, id_list, "ref")); // TODO: not sure if ref is true
 
 	return_type.p = TYPE_void;
-	st.insert("gets", return_type, "func_decl", params, built_in);
+	st.insert(0, "gets", return_type, "func_decl", params, built_in);
 
 	st.openScope();
 	variable_type.p = TYPE_int;
-	st.insert("n", variable_type);
+	st.insert(0, "n", variable_type);
 	varh_t.p = TYPE_char;
 	variable_type.c = new Array(varh_t);
-	st.insert("s", variable_type);
+	st.insert(0, "s", variable_type);
 	st.closeScope();
 
 	// int abs(int n)
@@ -1881,12 +1881,12 @@ void Library::init() {
 	id_list->push_back("n");
 	variable_type.p = TYPE_int;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("abs", return_type, "func_decl", params, built_in);
+	st.insert(0, "abs", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("n", variable_type);
+	st.insert(0, "n", variable_type);
 	st.closeScope();
 
 	// int ord(char c)
@@ -1895,12 +1895,12 @@ void Library::init() {
 	id_list->push_back("c");
 	variable_type.p = TYPE_char;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("ord", return_type, "func_decl", params, built_in);
+	st.insert(0, "ord", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("c", variable_type);
+	st.insert(0, "c", variable_type);
 	st.closeScope();
 
 	// char chr(int n)
@@ -1909,12 +1909,12 @@ void Library::init() {
 	id_list->push_back("n");
 	variable_type.p = TYPE_int;
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
 	return_type.p = TYPE_char;
-	st.insert("chr", return_type, "func_decl", params, built_in);
+	st.insert(0, "chr", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("n", variable_type);
+	st.insert(0, "n", variable_type);
 	st.closeScope();
 
 	// int strlen(char[] s)
@@ -1923,12 +1923,12 @@ void Library::init() {
 	id_list->push_back("s");
 	varh_t.p = TYPE_char; variable_type.c = new Array(varh_t);
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("strlen", return_type, "func_decl", params, built_in);
+	st.insert(0, "strlen", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("s", variable_type);
+	st.insert(0, "s", variable_type);
 	st.closeScope();
 
 	// int strcmp(char[] s1, s2)
@@ -1938,13 +1938,13 @@ void Library::init() {
 	id_list->push_back("s2");
 	varh_t.p = TYPE_char; variable_type.c = new Array(varh_t);
 
-	params->push_back(new Formal(variable_type, id_list, "val"));
+	params->push_back(new Formal(0, variable_type, id_list, "val"));
 	return_type.p = TYPE_int;
-	st.insert("strcmp", return_type, "func_decl", params, built_in);
+	st.insert(0, "strcmp", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("s1", variable_type);
-	st.insert("s2", variable_type);
+	st.insert(0, "s1", variable_type);
+	st.insert(0, "s2", variable_type);
 	st.closeScope();
 
 	// void strcpy(char[] trg, src)
@@ -1954,13 +1954,13 @@ void Library::init() {
 	id_list->push_back("src");
 	varh_t.p = TYPE_char; variable_type.c = new Array(varh_t);
 
-	params->push_back(new Formal(variable_type, id_list, "ref")); // TODO: not sure about ref
+	params->push_back(new Formal(0, variable_type, id_list, "ref")); // TODO: not sure about ref
 	return_type.p = TYPE_void;
-	st.insert("strcpy", return_type, "func_decl", params, built_in);
+	st.insert(0, "strcpy", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("trg", variable_type);
-	st.insert("src", variable_type);
+	st.insert(0, "trg", variable_type);
+	st.insert(0, "src", variable_type);
 	st.closeScope();
 
 	// void strcat(char[] trg, src)
@@ -1970,12 +1970,12 @@ void Library::init() {
 	id_list->push_back("src");
 	varh_t.p = TYPE_char; variable_type.c = new Array(varh_t);
 
-	params->push_back(new Formal(variable_type, id_list, "ref")); // TODO: not sure about ref
+	params->push_back(new Formal(0, variable_type, id_list, "ref")); // TODO: not sure about ref
 	return_type.p = TYPE_void;
-	st.insert("strcat", return_type, "func_decl", params, built_in);
+	st.insert(0, "strcat", return_type, "func_decl", params, built_in);
 
 	st.openScope();
-	st.insert("trg", variable_type);
-	st.insert("src", variable_type);
+	st.insert(0, "trg", variable_type);
+	st.insert(0, "src", variable_type);
 	st.closeScope();
 }
