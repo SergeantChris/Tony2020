@@ -3,8 +3,8 @@ A compiler for the programming language Tony (http://courses.softlab.ntua.gr/com
 
 # How to use this compiler
 * Navigate to `/src` directory
-* Run `make`.
-* Run `./do.sh ../examples/` and the tony program you wish to compile and run.
+* Run `make`
+* Run `./do.sh [name].tony` with the name of your tony source code
 * The available compiler flags are:
 	* `-O`: optimize intermediate code (LLVM)
 	* `-i`: print intermediate code in `stdout`
