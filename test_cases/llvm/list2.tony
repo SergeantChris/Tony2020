@@ -23,6 +23,11 @@ def main ():
   x := head(ge)
 	puti(x)
 	putb(b)
+
+	if b = true:
+		skip
+	end
+
   x := head(lt)
 	puti(x)
 	putb(b)

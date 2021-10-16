@@ -6,7 +6,7 @@ CXX=c++
 CXXFLAGS=-Wall -std=c++11 -g `$(LLVMCONFIG) --cxxflags`
 LDFLAGS=`$(LLVMCONFIG) --ldflags --system-libs --libs all`
 
-default: tony
+default: clean tony
 
 lexer.cpp: lexer.l
 	flex -s -o lexer.cpp lexer.l

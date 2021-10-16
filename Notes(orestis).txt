@@ -1,0 +1,6 @@
+
+	LLVM
+	* When i use a global variable n and i also use n as a parameter
+		to some function i get an error (n in both cases is int) see /test_cases/pass_sem/test.tony
+
+	* puts in the ll code takes <null operand>, which means that the char array is not even passed

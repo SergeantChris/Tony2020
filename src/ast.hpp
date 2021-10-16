@@ -331,7 +331,7 @@ private:
 
 class Branch: public Stmt {
 public:
-	Branch(int l, 
+	Branch(int l,
 		vector<shared_ptr<Stmt>>* ct,
 		Expr* c = new Const("true"),
 		vector<Branch*>* eif = nullptr,
@@ -415,6 +415,7 @@ class Def: public ASTnode { //abstract class
 public:
 	virtual ~Def();
 };
+
 
 class FuncDef: public Def {
 public:

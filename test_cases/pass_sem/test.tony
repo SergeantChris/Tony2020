@@ -1,4 +1,18 @@
 def main():
-	char a
-	a := '\0'
+
+	decl int second(int n)
+	def int first(int n):
+		int i
+		i := second(n)
+		skip
+		return i
+	end
+
+	def int second(int n):
+		int i
+		i := n + 1
+		return i
+	end
+
+	puti(first(1))
 end

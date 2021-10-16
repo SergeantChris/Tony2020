@@ -124,7 +124,7 @@ program:
 		//cout << "#######################################################################################" << endl << endl;
 		$1->sem();
 		st.closeScope();
-		cout << "Semantics OK" << endl;
+		/* cout << "Semantics OK" << endl; */
 		/* cout << endl << "------------------------------------------------------- LLVM --------------------------------------------------------" << std::endl; */
 		$1->llvm_compile_and_dump(opt_flag);
 		delete $1;
@@ -311,6 +311,6 @@ int main(int argc, char* argv[]) {
   }
   yyin = f;
   yyparse();
-  cout << "Success." << endl;
+  /* cout << "Success." << endl; */
   return 0;
 }

@@ -235,7 +235,9 @@ void ASTnode::llvm_compile_and_dump(bool optimize) {
 	// Verify the IR - uncommented when compiler is finished
 	// it checks for any mistakes in the produced llvm
 	// bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
-	llvm::verifyModule(*TheModule, &llvm::errs());
+
+	// llvm::verifyModule(*TheModule, &llvm::errs());
+
 	// if(bad) {
 	//   std::cerr << "the IR is BAD!" << std::endl; // make it with color so call error function
 	//   std::exit(1);
@@ -660,12 +662,11 @@ llvm::Value* Id::compile_check_call(bool call, string func_name, int index) cons
 		// get func value in order to see the params that are called by ref
 		llvm::Function *func_value = TheModule->getFunction(func_name);
 		ValueEntry *e = vt.lookup(func_value->getName());
-		map<string, llvm::Value*> refs = e->refs;
 		// define which params are by ref by comparing index
 		int i = 0;
 		for (auto &Arg : func_value->args()){
 			string name = Arg.getName();
-			if (refs.count(name) & (i == index)){
+			if (e->refs.count(name) & (i == index)){
 				// if it is called by ref we pass the allocation (pointer) of the var
 				// else we load the value and pass it
 				ValueEntry *parentry = vt.lookup(var);
@@ -701,7 +702,13 @@ String::String(string s): Const(s, 0) {}
 String::~String() {}
 bool String::isLVal() const { return false;}
 llvm::Value* String::compile_alloc() const {
+	// TODO: convert the string to array of chars
+	// allocate array with typwei8
+	// with a loop add all the characters in the table
+	// save it to vt
 	return nullptr;
+	// return the array (Alloca)
+	// check if alloc class needs the value or the alloc (pointer)
 }
 
 
@@ -986,11 +993,9 @@ Type Call::getType() {
 llvm::Value* Call::compile() const {
 	// Look up the name in the global module table.
 	string func_name = string(id);
-	// cout << "calling -> " << func_name << endl;
 
 	llvm::Function *func_value = TheModule->getFunction(func_name);
 	ValueEntry *fe = vt.lookup(func_value->getName());
-	map<string, llvm::Value*> refs = fe->refs;
 
 	int i = 0;
 	vector<llvm::Value *> argsv = {};
@@ -998,7 +1003,6 @@ llvm::Value* Call::compile() const {
 		for(shared_ptr<Expr> e: *exprList) {
 			string ename = e->getId();
 			llvm::Value *v = e->compile_check_call(true, func_name, i);
-			// cout << ename << endl;
 
 			argsv.push_back(v);
 			ValueEntry *ee = vt.lookup(ename);
@@ -1012,7 +1016,7 @@ llvm::Value* Call::compile() const {
 					for (auto &Arg : func_value->args()){
 						if (j < i) { j++; continue; }
 						string aname = Arg.getName();
-						if (refs.count(aname) & (i == j)){
+						if (fe->refs.count(aname) & (i == j)){
 							// cout << aname << endl;
 							isRef = true;
 							break;
@@ -1050,7 +1054,6 @@ llvm::Value* Call::compile() const {
 				argsv.push_back(e->val);
 				// else add the new value
 		}
-	// cout << "okay call -> " << func_name << endl;
 	if (func_value->getReturnType() == llvm::Type::getVoidTy(TheContext))
 		return Builder.CreateCall(func_value, argsv);
 	return Builder.CreateCall(func_value, argsv, "calltmp");
@@ -1435,7 +1438,6 @@ void Header::sem(bool func) {
 }
 
 llvm::Type* Header::convertType(Type type, bool params) const {
-	// cout << type << endl;
 	if (type.p == TYPE_int) return i32;
 	else if (type.p == TYPE_bool) return i1;
 	else if (type.p == TYPE_char) return i8;
@@ -1448,6 +1450,7 @@ llvm::Type* Header::convertType(Type type, bool params) const {
 llvm::Value* Header::compile() const {
 	bool main = false;
 	string func_name = string(id);
+	// TODO: if this is commented out we get seg fault
 	if (func_name == "main") func_name = "jackthecutestdoggo";
 	// we already have a main - resolving conflict
 	if(vt.EmptyScopes()){
@@ -1472,7 +1475,6 @@ llvm::Value* Header::compile() const {
 		main = true;
 	}
 	llvm::Type *func_type = convertType(type, false);
-	// cout << "header ---> " << func_name << endl;
 	// adding parameters' type in Function Type
 	vector<llvm::Type*> params = {};
 	// Set names for all arguments.
@@ -1480,7 +1482,7 @@ llvm::Value* Header::compile() const {
 	map<string, llvm::Value*> refs = {};
 	bool isList;
 	vector<string> listVars = {};
-	if (fl)
+	if (fl) {
 		for(Formal *f: *fl) {
 			isList = false;
 			bool call_by_reference = f->getCb();
@@ -1514,6 +1516,7 @@ llvm::Value* Header::compile() const {
 				}
 			}
 		}
+	}
 	// adding global variables to the parameters
 	map<string, llvm::Type*> globalParams = vt.getGlobal();
 	map<string, llvm::Type*>::iterator it;
@@ -1537,11 +1540,13 @@ llvm::Value* Header::compile() const {
 		// cout << Args[Idx] << endl;
 		Arg.setName(Args[Idx++]);
 	}
+
 	vt.insert(func_name, F, refs);
 	// open the scope of the new function and add the formal params
 	vt.openScope();
-	if (fl)
+	if (fl) {
 		for(Formal *f: *fl) f->compile();
+	}
 	if (isList){
 		llvm::AllocaInst *a = nullptr;
 		for (long unsigned int j = 0; j < listVars.size(); j++){
@@ -1550,7 +1555,6 @@ llvm::Value* Header::compile() const {
 			else vt.insert(listVars[j], a, "ref");
 		}
 	}
-	// cout << "okay header -> " << func_name << endl;
 	return nullptr;
 }
 string Header::getId() {
@@ -1601,36 +1605,49 @@ void FuncDef::sem() {
 llvm::Value* FuncDef::compile() const {
 	// First, check for an existing function from a previous 'extern' declaration.
 	string func_name = hd->getId();
+
 	if (func_name == "main") func_name = "jackthecutestdoggo";
-	// cout << "----- " << func_name << endl;
 	llvm::Function *ParentFunc = Builder.GetInsertBlock()->getParent();
 	llvm::BasicBlock &ParentEntry = ParentFunc->getEntryBlock();
 	llvm::BasicBlock *ParentEntry1 = &ParentEntry;
-	hd->compile();
-	// cout << "after head" << endl;
+
+	if(!vt.lookup(func_name)) {
+		hd->compile();
+	}
+	else {
+		vt.openScope();
+		vector<Formal*>* func_formals = hd->getFormals();
+		if (func_formals) {
+			for(Formal *f: *func_formals) f->compile();
+		}
+		// TODO: add list functionality like header compile
+	}
 	ValueEntry *e = vt.lookup(func_name);
 	llvm::Function *TheFunction = e->func;
 	// Create a new basic block to start insertion into.
 	llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", TheFunction);
+
 	Builder.SetInsertPoint(BB);
+
 	// get the name and the value of the arguments
 	for (auto &Arg : TheFunction->args()){
 		string argname = Arg.getName();
-		cout << argname << endl;
 		ValueEntry *e = vt.lookup(argname, true);
 		if (e) vt.insert(argname, nullptr, "glob");
 		vt.insert(argname, &Arg);
-		if (vt.lookup(argname)->alloc) cout << "we have alloc: " << argname << endl;
-		if (vt.lookup(argname)->val) cout << "we have val: " << argname << endl;
+		// if (vt.lookup(argname)->alloc) cout << "arg alloc: " << argname << endl;
+		// if (vt.lookup(argname)->val) cout << "arg val: " << argname << endl;
 	}
-	// cout << "before def" << endl;
-	for(shared_ptr<Def> d: *defl) d->compile();
-	// cout << "before stmt" << endl;
+
+	for(shared_ptr<Def> d: *defl) {
+		d->compile();
+
+	}
+
 	for(shared_ptr<Stmt> s: *stmtl) s->compile();
-	// cout << "hm " << endl;
+
 	if (Builder.GetInsertBlock()->empty()){
 		// if return stmt are in Branches add decorative return
-		cout << "empty -> " << func_name << endl;
 		llvm::Type *func_type = TheFunction->getReturnType();
 		if (func_type == i1) Builder.CreateRet(c1(0));
 		else if (func_type == i8) Builder.CreateRet(c8(0));
@@ -1639,13 +1656,14 @@ llvm::Value* FuncDef::compile() const {
 		else if (func_type->isArrayTy()) Builder.CreateRet(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(func_type->getArrayElementType())));
 		else if (func_type->isPointerTy()) Builder.CreateRet(llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(func_type->getPointerElementType())));
 	}
+
 	if (hd->isVoid()) Builder.CreateRetVoid();
+
 	// Validate the generated code, checking for consistency.
 	verifyFunction(*TheFunction);
-	// vt.insert(func_name, TheFunction); //update
+
 	vt.closeScope();
 	Builder.SetInsertPoint(ParentEntry1);
-	cout << "okay funcdef -> " << func_name << endl;
 	return nullptr;
 }
 
@@ -1663,24 +1681,8 @@ void FuncDecl::sem() {
 	st.closeScope();
 }
 llvm::Value* FuncDecl::compile() const {
-	// this is not needed - no need for declaration!
-	// get details from header
-	string func_name = hd->getId();
-	Type type = hd->getType();
-	vector<Formal*>* fl = hd->getFormals();
-
-	// convert type to llvm Type
-	llvm::Type *func_type = convertType(type);
-	vector<llvm::Type*> params = {};
-	if (fl)
-		for(Formal *f: *fl) {
-			llvm::Type *llvm_pair_type = convertType(f->getType());
-			if (f->getCb()) llvm_pair_type = llvm::PointerType::getUnqual(llvm_pair_type);
-			params.insert(params.end(), f->getCountofIds(), llvm_pair_type);
-		}
-	llvm::FunctionType *FT =
-		llvm::FunctionType::get(func_type, params, false);
-	llvm::Function::Create(FT, llvm::Function::ExternalLinkage, func_name, TheModule.get());
+	hd->compile();
+	vt.closeScope();
 	return nullptr;
 }
 

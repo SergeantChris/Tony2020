@@ -1,8 +1,10 @@
 def main ():
 	int n
+
+	decl myprint(bool b)
+
 	def bool prime? (int n):
     int i
-		puti(n)
     if n < 0:
       return prime?(-n)
     elsif n < 2:
@@ -12,7 +14,6 @@ def main ():
     elsif n mod 2 = 0: return false
     else:
       for i := 3; i <= n / 2; i := i + 2:
-				puti(i)
         if n mod i = 0: return false end
       end
       return true
@@ -20,13 +21,18 @@ def main ():
     return true
   end
 
-  int limit, number, counter
-	bool c
-  counter := 10
-	c := prime?(counter)
+
+	def getit(int ka):
+		myprint(prime?(ka))
+	end
+
+	def myprint(bool b):
+		putb(b)
+	end
+
+	%puts("give a number\n")
 	n := geti()
-	putb(prime?(n))
-	puts("/n")
-	strlen("Ciao")
-	c := prime?(9)
+	getit(n)
+	%puts("/n")
+	%strlen("Ciao")
 end
