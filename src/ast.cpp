@@ -371,34 +371,41 @@ llvm::Value* Const::compile() const {
 			}
 
 			return Builder.CreateBitCast(strArrayAlloc, llvm::PointerType::getUnqual(i8), "StrArrayPtr");
+			// return Builder.CreateLoad(strArrayAlloc, "tempStrVal");
+			// return strArrayAlloc;
+
 	}
 	return nullptr;
 }
 llvm::Value* Const::compile_check_call(bool call, string func_name, int index) const {
 	return compile();
+
 }
 llvm::AllocaInst* Const::compile_alloc_mem(string name) const {
-	// cout << "------------------ MEM ALLOC CONST (String)" << endl;
-	// llvm::Value *v;
-	// int i = 0;
-	// char *tmpStr = (char *)tc.str;
-	//
-	// while(tmpStr[i] != '\0') {
-	// 	i++;
-	// }
+	if(tc_act == TC_str) {
+		int i = 0;
+		char *tmpStr = (char *)tc.str;
 
-	// llvm::Value *v = expr->compile(); // size of array
-	// // get int out of i32 (size)
-	// llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
-	// uint64_t size = ci->llvm::ConstantInt::getZExtValue();
-	// // get type of array
-	// llvm::Type *array_type = defineArrayType(new_type);
-	// // define an array type
-	// llvm::ArrayType *array = llvm::ArrayType::get(array_type->getPointerElementType(), size);
-	// // allocate the array
-	// llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
-	// ArrayAlloc->setAlignment(8);
-	// return ArrayAlloc;
+		while(tmpStr[i] != '\0') {
+			i++;
+		}
+
+		// define an array type
+		llvm::ArrayType *CharArray = llvm::ArrayType::get(i8, i+1);
+		// allocate the array
+		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(CharArray, nullptr, name);
+
+		// vt.insert(name, ArrayAlloc, "no", Tarray);
+		llvm::Value *v;
+
+		for(int j=0; j < i; j++) {
+				v = Builder.CreateInBoundsGEP(ArrayAlloc, {c32(0), c32(j)}, "elemalloc");
+				Builder.CreateStore(c8(tmpStr[j]), v);
+		}
+
+		return ArrayAlloc;
+	}
+
 	return nullptr;
 }
 
@@ -869,11 +876,21 @@ llvm::Value* Assign::compile() const {
 		// if etc i = new int[2] we dont have an allocation yet
 		// we dont store in this case, only memory allocation
 		llvm::AllocaInst *ral = expr->compile_alloc_mem(name);
+
+		// if(((lhs->getType())->getPointerElementType()->getArrayElementType()) == i8) {
+		// if(vt.lookup(name)) {
+		// 	cout << "------------ VRIKE PINAKA i8" << endl;
+		// 	llvm::Value *lhs = atom->compile_alloc();
+		// 	Builder.CreateStore(ral, lhs);
+		// }
+
 		vt.insert(name, ral, "no", Tarray);
 		//save the alloc
 		llvm::Value *v = ral;
 		// save it as a value as well
 		vt.insert(name, v);
+
+
 		return nullptr;
 	}
 	// get value of right side and alloc od left side
@@ -925,8 +942,7 @@ llvm::Value* Assign::compile() const {
 		}
 	}
 	if (rhs == llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(i32)) &&
-				e->type == Tlist)
-	{
+				e->type == Tlist) {
 		// if righ side is nil list => convert i32 type to actual list type
 		llvm::Type *list_type = (lhs->getType())->getPointerElementType()->getPointerElementType();
 		// create null pointer
@@ -1057,7 +1073,19 @@ llvm::Value* Call::compile() const {
 		for(shared_ptr<Expr> e: *exprList) {
 			string ename = e->getId();
 			llvm::Value *v = e->compile_check_call(true, func_name, i);
-
+			// array to pointer for sring parameters in library functions
+			// if(func_name == "puts" || func_name == "strlen" || func_name == "strcmp" || func_name == "strcat" || func_name == "strcpy") {
+			// 	// define an array type
+			// 	// cout << (v->getType()->isArrayTy()) << endl;
+			// 	llvm::ArrayType *CharArray = llvm::ArrayType::get(i8, v->getType()->getArrayNumElements());
+			//
+			// 	// allocate the array
+			// 	llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(CharArray, nullptr, "tempStringCallAlloc");
+			//
+			// 	Builder.CreateStore(v, ArrayAlloc);
+			// 	v = Builder.CreateBitCast(ArrayAlloc, llvm::PointerType::getUnqual(i8), "StrArrayPtr");
+			//
+			// }
 			argsv.push_back(v);
 			ValueEntry *ee = vt.lookup(ename);
 			if (ee)
