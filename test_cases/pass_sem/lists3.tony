@@ -1,5 +1,7 @@
 def main ():
 	int n
+	int len
+	char[] s
 
 	decl myprint(bool b)
 
@@ -29,10 +31,13 @@ def main ():
 	def myprint(bool b):
 		putb(b)
 	end
+	%puts("wait...")
 
-	%puts("give a number\n")
+	s := "Test"
+	puts("give a number: ")
 	n := geti()
 	getit(n)
-	%puts("/n")
-	%strlen("Ciao")
+	len := strlen("Ciao")
+	puts("m a g i c: ")
+	puti(len)
 end

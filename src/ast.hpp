@@ -140,6 +140,7 @@ public:
 	virtual void sem() override;
 	virtual llvm::Value* compile() const override;
 	virtual llvm::Value* compile_check_call(bool call, string func_name, int index) const override;
+	virtual llvm::AllocaInst* compile_alloc_mem(string name) const override;
 
 private:
 	union TC {
@@ -232,6 +233,7 @@ public:
 	~String();
 	virtual bool isLVal() const override;
 	virtual llvm::Value* compile_alloc() const override;
+	// virtual llvm::AllocaInst* compile_alloc_mem(string name) const override;
 };
 
 class DirectAcc: public Atom {

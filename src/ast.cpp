@@ -236,7 +236,7 @@ void ASTnode::llvm_compile_and_dump(bool optimize) {
 	// it checks for any mistakes in the produced llvm
 	// bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
 
-	// llvm::verifyModule(*TheModule, &llvm::errs());
+	llvm::verifyModule(*TheModule, &llvm::errs());
 
 	// if(bad) {
 	//   std::cerr << "the IR is BAD!" << std::endl; // make it with color so call error function
@@ -355,12 +355,51 @@ llvm::Value* Const::compile() const {
 		case(TC_bool): return c1(tc.boolean);
 		// leave as only i32 if it is needed to be something else it happens later in the code
 		case(TC_nil): return llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(i32));
-		case(TC_str): return nullptr;		// TODO: i dont know yet
+		case(TC_str):
+			llvm::Value *v;
+			int i = 0;
+			char *tmpStr = (char *)tc.str;
+
+			while(tmpStr[i] != '\0') {
+				i++;
+			}
+			llvm::Type *strArrayType = llvm::ArrayType::get(i8, i+1);
+			llvm::AllocaInst *strArrayAlloc = Builder.CreateAlloca(strArrayType, nullptr, "ConstStringArray");
+			for(int j=0; j < i; j++) {
+					v = Builder.CreateInBoundsGEP(strArrayAlloc, {c32(0), c32(j)}, "elemalloc");
+					Builder.CreateStore(c8(tmpStr[j]), v);
+			}
+
+			return Builder.CreateBitCast(strArrayAlloc, llvm::PointerType::getUnqual(i8), "StrArrayPtr");
 	}
 	return nullptr;
 }
 llvm::Value* Const::compile_check_call(bool call, string func_name, int index) const {
 	return compile();
+}
+llvm::AllocaInst* Const::compile_alloc_mem(string name) const {
+	// cout << "------------------ MEM ALLOC CONST (String)" << endl;
+	// llvm::Value *v;
+	// int i = 0;
+	// char *tmpStr = (char *)tc.str;
+	//
+	// while(tmpStr[i] != '\0') {
+	// 	i++;
+	// }
+
+	// llvm::Value *v = expr->compile(); // size of array
+	// // get int out of i32 (size)
+	// llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
+	// uint64_t size = ci->llvm::ConstantInt::getZExtValue();
+	// // get type of array
+	// llvm::Type *array_type = defineArrayType(new_type);
+	// // define an array type
+	// llvm::ArrayType *array = llvm::ArrayType::get(array_type->getPointerElementType(), size);
+	// // allocate the array
+	// llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
+	// ArrayAlloc->setAlignment(8);
+	// return ArrayAlloc;
+	return nullptr;
 }
 
 
@@ -703,14 +742,29 @@ String::~String() {}
 bool String::isLVal() const { return false;}
 llvm::Value* String::compile_alloc() const {
 	// TODO: convert the string to array of chars
-	// allocate array with typwei8
+	// allocate array with type i8
 	// with a loop add all the characters in the table
 	// save it to vt
 	return nullptr;
 	// return the array (Alloca)
 	// check if alloc class needs the value or the alloc (pointer)
 }
-
+// llvm::AllocaInst* String::compile_alloc_mem(string name) const {
+//
+// 	llvm::Value *v = expr->compile(); // size of array
+// 	// get int out of i32 (size)
+// 	llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
+// 	uint64_t size = ci->llvm::ConstantInt::getZExtValue();
+// 	// get type of array
+// 	llvm::Type *array_type = defineArrayType(new_type);
+// 	// define an array type
+// 	llvm::ArrayType *array = llvm::ArrayType::get(array_type->getPointerElementType(), size);
+// 	// allocate the array
+// 	llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
+// 	ArrayAlloc->setAlignment(8);
+// 	return ArrayAlloc;
+// 	return nullptr;
+// }
 
 DirectAcc::DirectAcc(int l, Atom* a, Expr* e): atom(a), expr(e), line_no(l) {}
 DirectAcc::~DirectAcc() { delete atom; delete expr; }
