@@ -34,6 +34,10 @@ def main ():
 	%puts("wait...")
 
 	s := "Test"
+	puts(s)
+	s := "Text"
+	puts(s)
+
 	puts("give a number: ")
 	n := geti()
 	getit(n)

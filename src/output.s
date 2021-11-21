@@ -25,6 +25,10 @@ jackthecutestdoggo:                     # @jackthecutestdoggo
 # %bb.0:                                # %entry
 	subq	$56, %rsp
 	.cfi_def_cfa_offset 64
+	movl	$1954047316, 23(%rsp)   # imm = 0x74786554
+	movl	$1954047316, 18(%rsp)   # imm = 0x74786554
+	movb	22(%rsp), %al
+	movb	%al, 27(%rsp)
 	movabsq	$7935449335195920743, %rax # imm = 0x6E20612065766967
 	movq	%rax, 40(%rsp)
 	movl	$1700949365, 48(%rsp)   # imm = 0x65626D75
@@ -33,22 +37,22 @@ jackthecutestdoggo:                     # @jackthecutestdoggo
 	leaq	40(%rsp), %rdi
 	callq	puts
 	callq	geti
-	movl	%eax, 16(%rsp)
-	leaq	12(%rsp), %rsi
-	leaq	16(%rsp), %rdx
+	movl	%eax, 8(%rsp)
+	leaq	4(%rsp), %rsi
+	leaq	8(%rsp), %rdx
 	movl	%eax, %edi
 	callq	getit
-	movl	$1868654915, 23(%rsp)   # imm = 0x6F616943
-	leaq	23(%rsp), %rdi
+	movl	$1868654915, 13(%rsp)   # imm = 0x6F616943
+	leaq	13(%rsp), %rdi
 	callq	strlen
-	movl	%eax, 12(%rsp)
+	movl	%eax, 4(%rsp)
 	movabsq	$2335433509065269357, %rax # imm = 0x206920672061206D
 	movq	%rax, 28(%rsp)
 	movw	$14947, 36(%rsp)        # imm = 0x3A63
 	movb	$32, 38(%rsp)
 	leaq	28(%rsp), %rdi
 	callq	puts
-	movl	12(%rsp), %edi
+	movl	4(%rsp), %edi
 	callq	puti
 	addq	$56, %rsp
 	.cfi_def_cfa_offset 8
