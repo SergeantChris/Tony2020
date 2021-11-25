@@ -1074,18 +1074,16 @@ llvm::Value* Call::compile() const {
 			string ename = e->getId();
 			llvm::Value *v = e->compile_check_call(true, func_name, i);
 			// array to pointer for sring parameters in library functions
-			// if(func_name == "puts" || func_name == "strlen" || func_name == "strcmp" || func_name == "strcat" || func_name == "strcpy") {
-			// 	// define an array type
-			// 	// cout << (v->getType()->isArrayTy()) << endl;
-			// 	llvm::ArrayType *CharArray = llvm::ArrayType::get(i8, v->getType()->getArrayNumElements());
-			//
-			// 	// allocate the array
-			// 	llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(CharArray, nullptr, "tempStringCallAlloc");
-			//
-			// 	Builder.CreateStore(v, ArrayAlloc);
-			// 	v = Builder.CreateBitCast(ArrayAlloc, llvm::PointerType::getUnqual(i8), "StrArrayPtr");
-			//
-			// }
+			if(func_name == "puts" || func_name == "strlen" || func_name == "strcmp" || func_name == "strcat" || func_name == "strcpy") {
+				// define an array type
+				if (v->getType()->isArrayTy()) {
+					llvm::ArrayType *CharArray = llvm::ArrayType::get(i8, v->getType()->getArrayNumElements());
+					// allocate the array
+					llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(CharArray, nullptr, "tempStringCallAlloc");
+					Builder.CreateStore(v, ArrayAlloc);
+					v = Builder.CreateBitCast(ArrayAlloc, llvm::PointerType::getUnqual(i8), "StrArrayPtr");
+				}
+			}
 			argsv.push_back(v);
 			ValueEntry *ee = vt.lookup(ename);
 			if (ee)
