@@ -35,8 +35,10 @@ def main ():
 
 	s := "Test"
 	puts(s)
-	s := "Text"
+	putc('\n')
+	s := "Texti"
 	puts(s)
+	putc('\n')
 
 	puts("give a number: ")
 	n := geti()

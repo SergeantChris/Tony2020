@@ -365,14 +365,13 @@ llvm::Value* Const::compile() const {
 			}
 			llvm::Type *strArrayType = llvm::ArrayType::get(i8, i+1);
 			llvm::AllocaInst *strArrayAlloc = Builder.CreateAlloca(strArrayType, nullptr, "ConstStringArray");
+			strArrayAlloc->setAlignment(16);
 			for(int j=0; j < i; j++) {
 					v = Builder.CreateInBoundsGEP(strArrayAlloc, {c32(0), c32(j)}, "elemalloc");
 					Builder.CreateStore(c8(tmpStr[j]), v);
 			}
 
 			return Builder.CreateBitCast(strArrayAlloc, llvm::PointerType::getUnqual(i8), "StrArrayPtr");
-			// return Builder.CreateLoad(strArrayAlloc, "tempStrVal");
-			// return strArrayAlloc;
 
 	}
 	return nullptr;
@@ -394,8 +393,7 @@ llvm::AllocaInst* Const::compile_alloc_mem(string name) const {
 		llvm::ArrayType *CharArray = llvm::ArrayType::get(i8, i+1);
 		// allocate the array
 		llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(CharArray, nullptr, name);
-
-		// vt.insert(name, ArrayAlloc, "no", Tarray);
+		ArrayAlloc->setAlignment(16);
 		llvm::Value *v;
 
 		for(int j=0; j < i; j++) {
@@ -488,6 +486,7 @@ llvm::Value* PreOp::compile() const {
 		string valname = val->getName();
 		// allocate a temp size in order the assign class to access the new size
 		llvm::AllocaInst *sal = Builder.CreateAlloca(i32, nullptr, valname + "_size");
+		sal->setAlignment(4);
 		Builder.CreateStore(size, sal);
 		// save it in the global value table in order to be accessible from other classes
 		vt.insert(valname + "_size", sal);
@@ -570,6 +569,7 @@ llvm::Value* Op::compile() const {
 			string sname = (string)retval->getName() + "_size";
 			// allocate the list size
 			llvm::AllocaInst *sal = Builder.CreateAlloca(i32, nullptr, sname);
+			sal->setAlignment(4);
 			// save it in vt in order assign class to access it
 			vt.insert(sname, sal);
 			// size = 1
@@ -599,7 +599,10 @@ llvm::Value* Op::compile() const {
 		ValueEntry *se = vt.lookup(sname_load);
 		if (se != nullptr && (se->alloc) != nullptr)
 			sal = se->alloc;
-		else sal = Builder.CreateAlloca(i32, nullptr, sname_load);
+		else {
+			sal = Builder.CreateAlloca(i32, nullptr, sname_load);
+			sal->setAlignment(4);
+		}
 		sval = Builder.CreateAdd(sval, c32(1), sname_load);
 		Builder.CreateStore(sval, sal);
 		vt.insert(sname_load, sal);
@@ -756,22 +759,6 @@ llvm::Value* String::compile_alloc() const {
 	// return the array (Alloca)
 	// check if alloc class needs the value or the alloc (pointer)
 }
-// llvm::AllocaInst* String::compile_alloc_mem(string name) const {
-//
-// 	llvm::Value *v = expr->compile(); // size of array
-// 	// get int out of i32 (size)
-// 	llvm::ConstantInt* ci = llvm::dyn_cast<llvm::ConstantInt>(v);
-// 	uint64_t size = ci->llvm::ConstantInt::getZExtValue();
-// 	// get type of array
-// 	llvm::Type *array_type = defineArrayType(new_type);
-// 	// define an array type
-// 	llvm::ArrayType *array = llvm::ArrayType::get(array_type->getPointerElementType(), size);
-// 	// allocate the array
-// 	llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(array, nullptr, name);
-// 	ArrayAlloc->setAlignment(8);
-// 	return ArrayAlloc;
-// 	return nullptr;
-// }
 
 DirectAcc::DirectAcc(int l, Atom* a, Expr* e): atom(a), expr(e), line_no(l) {}
 DirectAcc::~DirectAcc() { delete atom; delete expr; }
@@ -903,6 +890,7 @@ llvm::Value* Assign::compile() const {
 		if (calltype == "val"){
 			// if is call by value we just need to allocate memory and store (locally)
 			al = Builder.CreateAlloca(rhs->getType(), nullptr, name);
+			al->setAlignment(8);
 			vt.insert(name, al);
 			lhs = al;
 			if (e->type == Tlist) {
@@ -916,6 +904,7 @@ llvm::Value* Assign::compile() const {
 			//if call by ref we need PointerType to rhs->getType()
 			// we create a pointer to the allocation
 			al = Builder.CreateAlloca(llvm::PointerType::getUnqual(rhs->getType()), nullptr, name);
+			al->setAlignment(8);
 			lhs = al;
 			// store the aloc of the by ref param in the new alloc
 			Builder.CreateStore(e->val, lhs);
@@ -1073,6 +1062,7 @@ llvm::Value* Call::compile() const {
 		for(shared_ptr<Expr> e: *exprList) {
 			string ename = e->getId();
 			llvm::Value *v = e->compile_check_call(true, func_name, i);
+
 			// array to pointer for sring parameters in library functions
 			if(func_name == "puts" || func_name == "strlen" || func_name == "strcmp" || func_name == "strcat" || func_name == "strcpy") {
 				// define an array type
@@ -1080,6 +1070,7 @@ llvm::Value* Call::compile() const {
 					llvm::ArrayType *CharArray = llvm::ArrayType::get(i8, v->getType()->getArrayNumElements());
 					// allocate the array
 					llvm::AllocaInst *ArrayAlloc = Builder.CreateAlloca(CharArray, nullptr, "tempStringCallAlloc");
+					ArrayAlloc->setAlignment(16);
 					Builder.CreateStore(v, ArrayAlloc);
 					v = Builder.CreateBitCast(ArrayAlloc, llvm::PointerType::getUnqual(i8), "StrArrayPtr");
 				}

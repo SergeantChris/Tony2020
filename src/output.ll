@@ -41,7 +41,7 @@ define void @jackthecutestdoggo() {
 entry:
   %n = alloca i32, align 4
   %len = alloca i32, align 4
-  %s = alloca [5 x i8]
+  %s = alloca [5 x i8], align 16
   %elemalloc = getelementptr inbounds [5 x i8], [5 x i8]* %s, i32 0, i32 0
   store i8 84, i8* %elemalloc
   %elemalloc1 = getelementptr inbounds [5 x i8], [5 x i8]* %s, i32 0, i32 1
@@ -51,98 +51,108 @@ entry:
   %elemalloc3 = getelementptr inbounds [5 x i8], [5 x i8]* %s, i32 0, i32 3
   store i8 116, i8* %elemalloc3
   %s4 = load [5 x i8], [5 x i8]* %s
-  call void @puts([5 x i8] %s4)
-  %ConstStringArray = alloca [5 x i8]
-  %elemalloc5 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray, i32 0, i32 0
+  %tempStringCallAlloc = alloca [5 x i8], align 16
+  store [5 x i8] %s4, [5 x i8]* %tempStringCallAlloc
+  %StrArrayPtr = bitcast [5 x i8]* %tempStringCallAlloc to i8*
+  call void @puts(i8* %StrArrayPtr)
+  call void @putc(i8 10)
+  %ConstStringArray = alloca [6 x i8], align 16
+  %elemalloc5 = getelementptr inbounds [6 x i8], [6 x i8]* %ConstStringArray, i32 0, i32 0
   store i8 84, i8* %elemalloc5
-  %elemalloc6 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray, i32 0, i32 1
+  %elemalloc6 = getelementptr inbounds [6 x i8], [6 x i8]* %ConstStringArray, i32 0, i32 1
   store i8 101, i8* %elemalloc6
-  %elemalloc7 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray, i32 0, i32 2
+  %elemalloc7 = getelementptr inbounds [6 x i8], [6 x i8]* %ConstStringArray, i32 0, i32 2
   store i8 120, i8* %elemalloc7
-  %elemalloc8 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray, i32 0, i32 3
+  %elemalloc8 = getelementptr inbounds [6 x i8], [6 x i8]* %ConstStringArray, i32 0, i32 3
   store i8 116, i8* %elemalloc8
-  %StrArrayPtr = bitcast [5 x i8]* %ConstStringArray to i8*
-  %retarray = bitcast i8* %StrArrayPtr to [5 x i8]*
+  %elemalloc9 = getelementptr inbounds [6 x i8], [6 x i8]* %ConstStringArray, i32 0, i32 4
+  store i8 105, i8* %elemalloc9
+  %StrArrayPtr10 = bitcast [6 x i8]* %ConstStringArray to i8*
+  %retarray = bitcast i8* %StrArrayPtr10 to [5 x i8]*
   %callval = load [5 x i8], [5 x i8]* %retarray
   store [5 x i8] %callval, [5 x i8]* %s
-  %s9 = load [5 x i8], [5 x i8]* %s
-  call void @puts([5 x i8] %s9)
-  %ConstStringArray10 = alloca [16 x i8]
-  %elemalloc11 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 0
-  store i8 103, i8* %elemalloc11
-  %elemalloc12 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 1
-  store i8 105, i8* %elemalloc12
-  %elemalloc13 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 2
-  store i8 118, i8* %elemalloc13
-  %elemalloc14 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 3
-  store i8 101, i8* %elemalloc14
-  %elemalloc15 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 4
-  store i8 32, i8* %elemalloc15
-  %elemalloc16 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 5
-  store i8 97, i8* %elemalloc16
-  %elemalloc17 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 6
-  store i8 32, i8* %elemalloc17
-  %elemalloc18 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 7
-  store i8 110, i8* %elemalloc18
-  %elemalloc19 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 8
-  store i8 117, i8* %elemalloc19
-  %elemalloc20 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 9
-  store i8 109, i8* %elemalloc20
-  %elemalloc21 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 10
-  store i8 98, i8* %elemalloc21
-  %elemalloc22 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 11
-  store i8 101, i8* %elemalloc22
-  %elemalloc23 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 12
-  store i8 114, i8* %elemalloc23
-  %elemalloc24 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 13
-  store i8 58, i8* %elemalloc24
-  %elemalloc25 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray10, i32 0, i32 14
-  store i8 32, i8* %elemalloc25
-  %StrArrayPtr26 = bitcast [16 x i8]* %ConstStringArray10 to i8*
-  call void @puts(i8* %StrArrayPtr26)
+  %s11 = load [5 x i8], [5 x i8]* %s
+  %tempStringCallAlloc12 = alloca [5 x i8], align 16
+  store [5 x i8] %s11, [5 x i8]* %tempStringCallAlloc12
+  %StrArrayPtr13 = bitcast [5 x i8]* %tempStringCallAlloc12 to i8*
+  call void @puts(i8* %StrArrayPtr13)
+  call void @putc(i8 10)
+  %ConstStringArray14 = alloca [16 x i8], align 16
+  %elemalloc15 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 0
+  store i8 103, i8* %elemalloc15
+  %elemalloc16 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 1
+  store i8 105, i8* %elemalloc16
+  %elemalloc17 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 2
+  store i8 118, i8* %elemalloc17
+  %elemalloc18 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 3
+  store i8 101, i8* %elemalloc18
+  %elemalloc19 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 4
+  store i8 32, i8* %elemalloc19
+  %elemalloc20 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 5
+  store i8 97, i8* %elemalloc20
+  %elemalloc21 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 6
+  store i8 32, i8* %elemalloc21
+  %elemalloc22 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 7
+  store i8 110, i8* %elemalloc22
+  %elemalloc23 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 8
+  store i8 117, i8* %elemalloc23
+  %elemalloc24 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 9
+  store i8 109, i8* %elemalloc24
+  %elemalloc25 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 10
+  store i8 98, i8* %elemalloc25
+  %elemalloc26 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 11
+  store i8 101, i8* %elemalloc26
+  %elemalloc27 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 12
+  store i8 114, i8* %elemalloc27
+  %elemalloc28 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 13
+  store i8 58, i8* %elemalloc28
+  %elemalloc29 = getelementptr inbounds [16 x i8], [16 x i8]* %ConstStringArray14, i32 0, i32 14
+  store i8 32, i8* %elemalloc29
+  %StrArrayPtr30 = bitcast [16 x i8]* %ConstStringArray14 to i8*
+  call void @puts(i8* %StrArrayPtr30)
   %calltmp = call i32 @geti()
   store i32 %calltmp, i32* %n
-  %n27 = load i32, i32* %n
-  call void @getit(i32 %n27, i32* %len, i32* %n)
-  %ConstStringArray28 = alloca [5 x i8]
-  %elemalloc29 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray28, i32 0, i32 0
-  store i8 67, i8* %elemalloc29
-  %elemalloc30 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray28, i32 0, i32 1
-  store i8 105, i8* %elemalloc30
-  %elemalloc31 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray28, i32 0, i32 2
-  store i8 97, i8* %elemalloc31
-  %elemalloc32 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray28, i32 0, i32 3
-  store i8 111, i8* %elemalloc32
-  %StrArrayPtr33 = bitcast [5 x i8]* %ConstStringArray28 to i8*
-  %calltmp34 = call i32 @strlen(i8* %StrArrayPtr33)
-  store i32 %calltmp34, i32* %len
-  %ConstStringArray35 = alloca [12 x i8]
-  %elemalloc36 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 0
-  store i8 109, i8* %elemalloc36
-  %elemalloc37 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 1
-  store i8 32, i8* %elemalloc37
-  %elemalloc38 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 2
-  store i8 97, i8* %elemalloc38
-  %elemalloc39 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 3
-  store i8 32, i8* %elemalloc39
-  %elemalloc40 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 4
-  store i8 103, i8* %elemalloc40
-  %elemalloc41 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 5
+  %n31 = load i32, i32* %n
+  call void @getit(i32 %n31, i32* %len, i32* %n)
+  %ConstStringArray32 = alloca [5 x i8], align 16
+  %elemalloc33 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray32, i32 0, i32 0
+  store i8 67, i8* %elemalloc33
+  %elemalloc34 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray32, i32 0, i32 1
+  store i8 105, i8* %elemalloc34
+  %elemalloc35 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray32, i32 0, i32 2
+  store i8 97, i8* %elemalloc35
+  %elemalloc36 = getelementptr inbounds [5 x i8], [5 x i8]* %ConstStringArray32, i32 0, i32 3
+  store i8 111, i8* %elemalloc36
+  %StrArrayPtr37 = bitcast [5 x i8]* %ConstStringArray32 to i8*
+  %calltmp38 = call i32 @strlen(i8* %StrArrayPtr37)
+  store i32 %calltmp38, i32* %len
+  %ConstStringArray39 = alloca [12 x i8], align 16
+  %elemalloc40 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 0
+  store i8 109, i8* %elemalloc40
+  %elemalloc41 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 1
   store i8 32, i8* %elemalloc41
-  %elemalloc42 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 6
-  store i8 105, i8* %elemalloc42
-  %elemalloc43 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 7
+  %elemalloc42 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 2
+  store i8 97, i8* %elemalloc42
+  %elemalloc43 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 3
   store i8 32, i8* %elemalloc43
-  %elemalloc44 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 8
-  store i8 99, i8* %elemalloc44
-  %elemalloc45 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 9
-  store i8 58, i8* %elemalloc45
-  %elemalloc46 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray35, i32 0, i32 10
-  store i8 32, i8* %elemalloc46
-  %StrArrayPtr47 = bitcast [12 x i8]* %ConstStringArray35 to i8*
-  call void @puts(i8* %StrArrayPtr47)
-  %len48 = load i32, i32* %len
-  call void @puti(i32 %len48)
+  %elemalloc44 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 4
+  store i8 103, i8* %elemalloc44
+  %elemalloc45 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 5
+  store i8 32, i8* %elemalloc45
+  %elemalloc46 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 6
+  store i8 105, i8* %elemalloc46
+  %elemalloc47 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 7
+  store i8 32, i8* %elemalloc47
+  %elemalloc48 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 8
+  store i8 99, i8* %elemalloc48
+  %elemalloc49 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 9
+  store i8 58, i8* %elemalloc49
+  %elemalloc50 = getelementptr inbounds [12 x i8], [12 x i8]* %ConstStringArray39, i32 0, i32 10
+  store i8 32, i8* %elemalloc50
+  %StrArrayPtr51 = bitcast [12 x i8]* %ConstStringArray39 to i8*
+  call void @puts(i8* %StrArrayPtr51)
+  %len52 = load i32, i32* %len
+  call void @puti(i32 %len52)
   ret void
 }
 
