@@ -10,3 +10,7 @@ A compiler for the programming language Tony (http://courses.softlab.ntua.gr/com
 	* `-i`: print intermediate code in `stdout`
 	* `-f`: print final code (assembly) in `stdout`
 * The program will be compiled (if flags where selected, the respective output will be printed in `stdout`) and the final code will be executed.
+
+# !! Known issues !!
+* Arrays and Lists as function arguments
+* Lists as function return type
