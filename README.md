@@ -11,6 +11,6 @@ A compiler for the programming language Tony (http://courses.softlab.ntua.gr/com
 	* `-f`: print final code (assembly) in `stdout`
 * The program will be compiled (if flags where selected, the respective output will be printed in `stdout`) and the final code will be executed.
 
-# !! Known issues !!
+# :skull: !! Known issues !! :skull:
 * Arrays and Lists as function arguments
 * Lists as function return type
