@@ -3,4 +3,8 @@ src/parser.cpp
 src/parser.hpp
 src/parser.output
 src/*.o
+src/*.gch
+src/*.out 
+src/*.ll
+src/*.s
 src/tony
