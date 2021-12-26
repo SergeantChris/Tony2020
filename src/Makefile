@@ -23,4 +23,4 @@ clean:
 	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *.gch *.out *.ll *.s
 
 distclean: clean
-	$(RM) tony *.ll *.s *.out
+	$(RM) tony
