@@ -14,3 +14,4 @@ A compiler for the programming language [Tony](http://courses.softlab.ntua.gr/co
 ## :skull: !! Known issues !! :skull:
 * Arrays and Lists as function arguments
 * Lists as function return type
+* puts / puti
